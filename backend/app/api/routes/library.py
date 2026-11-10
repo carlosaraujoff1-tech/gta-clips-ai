@@ -6,27 +6,10 @@ from fastapi import APIRouter
 from sqlalchemy import func, select
 
 from app.api.deps import DbSession, PageParams
-from app.db.models import Clip, ClipStatus, Publication, Recording
-from app.schemas.library import ClipOut, Page, PublicationOut, RecordingOut
+from app.db.models import Clip, ClipStatus, Publication
+from app.schemas.library import ClipOut, Page, PublicationOut
 
 router = APIRouter(tags=["library"])
-
-
-@router.get("/recordings", response_model=Page[RecordingOut])
-def list_recordings(db: DbSession, page: PageParams) -> Page[RecordingOut]:
-    total = db.scalar(select(func.count()).select_from(Recording)) or 0
-    rows = db.scalars(
-        select(Recording)
-        .order_by(Recording.created_at.desc(), Recording.id.desc())
-        .limit(page.limit)
-        .offset(page.offset)
-    ).all()
-    return Page(
-        items=[RecordingOut.model_validate(r) for r in rows],
-        total=total,
-        limit=page.limit,
-        offset=page.offset,
-    )
 
 
 @router.get("/clips", response_model=Page[ClipOut])

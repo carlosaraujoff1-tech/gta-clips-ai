@@ -4,12 +4,12 @@ from fastapi import APIRouter
 from sqlalchemy import func, select
 
 from app.api.deps import DbSession
+from app.api.routes.recordings import to_out
 from app.db.models import Clip, ClipStatus, Publication, Recording
 from app.schemas.library import (
     DashboardCounts,
     DashboardStorage,
     DashboardSummary,
-    RecordingOut,
 )
 from app.services.storage import storage_status
 from app.services.user_settings import load_user_settings
@@ -45,5 +45,5 @@ def dashboard_summary(db: DbSession) -> DashboardSummary:
             total_folders=len(status.folders),
             clips_free_bytes=clips_folder.free_bytes,
         ),
-        recent_recordings=[RecordingOut.model_validate(r) for r in recent],
+        recent_recordings=[to_out(r) for r in recent],
     )

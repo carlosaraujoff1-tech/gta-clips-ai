@@ -70,6 +70,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   const payload: unknown = await response.json().catch(() => null);
+  if (response.status === 204) return undefined as T;
   if (!response.ok) {
     const error = isRecord(payload) && isRecord(payload.error) ? payload.error : null;
     // A proxy error (backend offline) comes back as a non-JSON 5xx from Next.js.
@@ -94,4 +95,6 @@ export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
   put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
+  patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
+  delete: (path: string) => request<void>("DELETE", path),
 };

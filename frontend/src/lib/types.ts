@@ -19,15 +19,53 @@ export interface Page<T> {
 export interface Recording {
   id: number;
   title: string;
+  notes: string | null;
   file_path: string;
   file_size_bytes: number;
+  file_modified_at: string | null;
   duration_seconds: number | null;
   width: number | null;
   height: number | null;
   fps: number | null;
+  container: string | null;
+  video_codec: string | null;
+  audio_codec: string | null;
+  audio_tracks: number | null;
+  bitrate_kbps: number | null;
+  probed_at: string | null;
   recorded_at: string | null;
   status: RecordingStatus;
+  error_message: string | null;
   created_at: string;
+  updated_at: string;
+  file_exists: boolean;
+}
+
+export type RecordingSort = "recent" | "recorded" | "title" | "duration" | "size";
+
+export interface LibraryStats {
+  total: number;
+  total_size_bytes: number;
+  total_duration_seconds: number;
+  missing_metadata: number;
+}
+
+export type JobType = "scan_originals" | "import_file" | "probe_recording";
+export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+
+export interface Job {
+  id: number;
+  type: JobType;
+  status: JobStatus;
+  progress: number;
+  message: string | null;
+  error: string | null;
+  result: Record<string, unknown> | null;
+  payload: Record<string, unknown>;
+  cancel_requested: boolean;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
 }
 
 export interface Clip {

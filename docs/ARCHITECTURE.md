@@ -47,15 +47,37 @@ Browser ──► Next.js (127.0.0.1:3000) ──/api/* proxy──► FastAPI (
 
 ### Data model
 
-`recordings` → `clips` → `publications`, plus `app_settings`. Video files are never stored in
+`recordings` → `clips` → `publications`, plus `app_settings` and `jobs`. Video files are never stored in
 the DB: rows hold file paths and metadata. Status columns are plain strings (non-native enums)
 so the schema migrates cleanly to PostgreSQL later if ever needed.
 
-### Background work (planned for Phase 2+)
+### Background jobs (`app/jobs/`)
 
-Long tasks (probing, transcription, analysis, rendering) will run in an in-process worker backed
-by a `jobs` table in SQLite: no Redis/Celery (poorly supported on Windows), survives restarts,
-and processes one heavy job at a time to fit the Ryzen 5 5500 / RX 7600 8 GB.
+Long tasks run in an in-process worker (`JobRunner`) backed by the `jobs` table:
+
+- **One worker thread, one job at a time**: heavy work (copying multi-GB files, later
+  transcription and rendering) must not compete for the same disk/CPU/GPU on a Ryzen 5 5500 /
+  RX 7600 8 GB. No Redis/Celery (poorly supported on Windows, unnecessary locally).
+- **Durable queue**: queued jobs survive a restart; jobs that were *running* when the app stopped
+  are marked as failed ("interrompida") on the next start.
+- **Progress & cancellation**: handlers receive a `JobContext` with `progress()` (throttled DB
+  writes) and `check_cancelled()` (cooperative; the API sets `cancel_requested`).
+- **Errors**: `JobFailedError` carries a user-facing message; anything else is logged with the
+  stack trace and reported as a generic internal error.
+
+Job types (Phase 2): `scan_originals`, `import_file`, `probe_recording`. Duplicate active jobs
+(same scan / same source file / same recording) are rejected with HTTP 409.
+
+### Import pipeline (Phase 2)
+
+- `services/library.py`: recursive discovery of video files, `.part` copy with progress
+  (renamed only when complete, removed on failure/cancel), registration, re-probing.
+- `services/media_probe.py`: `ffprobe -show_format -show_streams` parsed into duration,
+  resolution, fps (`avg_frame_rate`), codecs, audio track count (OBS multi-track), bitrate and
+  creation time. Cover-art streams are ignored.
+- Source files are never moved or deleted. Removing a recording deletes only the DB row.
+- `file_exists` is computed on read, so an unplugged drive shows as "Arquivo não encontrado"
+  instead of breaking the library.
 
 ## Frontend
 

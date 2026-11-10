@@ -29,7 +29,7 @@ const PHASES = [
   { n: 7, name: "Publicação" },
   { n: 8, name: "Métricas" },
 ] as const;
-const CURRENT_PHASE = 1;
+const CURRENT_PHASE = 2;
 
 function StatCard({
   label,
@@ -255,7 +255,9 @@ export function DashboardView() {
             <Skeleton className="h-28" />
           ) : data.recent_recordings.length === 0 ? (
             <EmptyState icon={Video} title="Nenhuma live importada ainda">
-              A importação de gravações chega na Fase 2.
+              <Link href="/lives" className="text-accent-soft hover:text-ink">
+                Importe sua primeira gravação →
+              </Link>
             </EmptyState>
           ) : (
             <ul className="divide-y divide-line">

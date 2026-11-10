@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  CircleCheck,
-  CircleX,
-  Download,
-  FolderInput,
-  Pencil,
-  Scissors,
-  Send,
-  ShieldCheck,
-  Upload,
-  Video,
-} from "lucide-react";
+import { CircleCheck, CircleX, Download, Pencil, Scissors, Send, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -19,7 +8,6 @@ import {
   CLIP_STATUS_LABEL,
   PLATFORM_LABEL,
   PublicationStatusBadge,
-  RecordingStatusBadge,
 } from "@/components/status";
 import {
   Card,
@@ -31,8 +19,8 @@ import {
   Skeleton,
   cx,
 } from "@/components/ui";
-import { formatBytes, formatDate, formatDuration } from "@/lib/format";
-import type { Clip, ClipStatus, Page, Publication, Recording } from "@/lib/types";
+import { formatDate, formatDuration } from "@/lib/format";
+import type { Clip, ClipStatus, Page, Publication } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
 function LoadingRows() {
@@ -47,77 +35,6 @@ function LoadingRows() {
 
 function TotalLabel({ total }: { total: number }) {
   return <span className="text-xs text-ink-faint">{total} no total</span>;
-}
-
-/* ------------------------------------------------------------------ Lives */
-
-export function LivesView() {
-  const { data, error, reload } = useApi<Page<Recording>>("/recordings?limit=100");
-  return (
-    <>
-      <PageHeader
-        title="Lives"
-        description="Importe e gerencie suas lives e gravações de GTA RP. Os arquivos ficam no HD externo; o sistema guarda apenas o caminho e os metadados."
-        actions={
-          <>
-            <PlannedButton icon={FolderInput} phase={2}>
-              Escanear pasta
-            </PlannedButton>
-            <PlannedButton icon={Upload} phase={2}>
-              Importar gravação
-            </PlannedButton>
-          </>
-        }
-      />
-      <PhaseNotice phase={2} title="Importação de gravações">
-        Vai ler os vídeos da pasta de originais, extrair duração, resolução e FPS com o FFprobe e
-        organizar tudo aqui.
-      </PhaseNotice>
-      <Card title="Gravações" icon={Video} action={data ? <TotalLabel total={data.total} /> : null}>
-        {error ? (
-          <ErrorState message={error.message} onRetry={reload} />
-        ) : !data ? (
-          <LoadingRows />
-        ) : data.items.length === 0 ? (
-          <EmptyState icon={Video} title="Nenhuma gravação importada">
-            Quando a importação estiver disponível, suas lives aparecerão nesta lista.
-          </EmptyState>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-xs uppercase tracking-wider text-ink-faint">
-                <tr>
-                  <th className="pb-3 font-medium">Título</th>
-                  <th className="pb-3 font-medium">Duração</th>
-                  <th className="pb-3 font-medium">Resolução</th>
-                  <th className="pb-3 font-medium">Tamanho</th>
-                  <th className="pb-3 font-medium">Importada em</th>
-                  <th className="pb-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {data.items.map((r) => (
-                  <tr key={r.id} className="text-ink-muted">
-                    <td className="py-3 pr-4 text-ink">{r.title}</td>
-                    <td className="py-3 pr-4 tabular-nums">{formatDuration(r.duration_seconds)}</td>
-                    <td className="py-3 pr-4 tabular-nums">
-                      {r.width && r.height ? `${r.width}×${r.height}` : "—"}
-                      {r.fps ? ` · ${Math.round(r.fps)} fps` : ""}
-                    </td>
-                    <td className="py-3 pr-4 tabular-nums">{formatBytes(r.file_size_bytes)}</td>
-                    <td className="py-3 pr-4">{formatDate(r.created_at)}</td>
-                    <td className="py-3">
-                      <RecordingStatusBadge status={r.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-    </>
-  );
 }
 
 /* ------------------------------------------------------------------ Clips */

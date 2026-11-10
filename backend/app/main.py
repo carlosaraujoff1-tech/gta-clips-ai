@@ -15,12 +15,14 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.routes import dashboard, health, library, settings, system
+from app.api.routes import dashboard, health, jobs, library, recordings, settings, system
 from app.core.config import APP_NAME, APP_VERSION, Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import CLIENT_HEADER, LocalClientGuardMiddleware, RequestContextMiddleware
-from app.db.session import dispose_engine, init_engine, run_migrations
+from app.db.session import dispose_engine, get_session_factory, init_engine, run_migrations
+from app.jobs.handlers import HANDLERS
+from app.jobs.runner import JobRunner
 
 log = get_logger(__name__)
 
@@ -30,11 +32,15 @@ def create_app(config: Settings | None = None) -> FastAPI:
     configure_logging(config.log_level, config.log_dir, as_json=config.log_json)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         init_engine(config)
         run_migrations(config)
+        runner = JobRunner(get_session_factory(), HANDLERS)
+        app.state.job_runner = runner
+        runner.start()
         log.info("backend_started", version=APP_VERSION, host=config.host, port=config.port)
         yield
+        runner.stop()
         dispose_engine()
         log.info("backend_stopped")
 
@@ -55,7 +61,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
     register_error_handlers(app)
 
     api = APIRouter(prefix="/api")
-    for module in (health, dashboard, settings, system, library):
+    for module in (health, dashboard, settings, system, recordings, jobs, library):
         api.include_router(module.router)
     app.include_router(api)
     return app

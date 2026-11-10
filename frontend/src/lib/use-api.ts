@@ -11,13 +11,21 @@ export interface ApiState<T> {
   reload: () => void;
 }
 
-/** Fetches `path` on mount (and when it changes). `reload()` fetches again. */
-export function useApi<T>(path: string, options: { pollMs?: number } = {}): ApiState<T> {
+/**
+ * Fetches `path` on mount (and when it changes). `reload()` fetches again.
+ * `pollMs` re-fetches periodically; it can be a function of the latest data
+ * (e.g. poll fast only while a background task is running).
+ */
+export function useApi<T>(
+  path: string,
+  options: { pollMs?: number | ((data: T | null) => number | undefined) } = {},
+): ApiState<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
   const [nonce, setNonce] = useState(0);
   const requestId = useRef(0);
+  const pollMs = typeof options.pollMs === "function" ? options.pollMs(data) : options.pollMs;
 
   useEffect(() => {
     const id = ++requestId.current;
@@ -40,12 +48,12 @@ export function useApi<T>(path: string, options: { pollMs?: number } = {}): ApiS
         });
     };
     run();
-    const timer = options.pollMs ? setInterval(run, options.pollMs) : undefined;
+    const timer = pollMs ? setInterval(run, pollMs) : undefined;
     return () => {
       cancelled = true;
       if (timer) clearInterval(timer);
     };
-  }, [path, nonce, options.pollMs]);
+  }, [path, nonce, pollMs]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   return { data, error, loading, reload };

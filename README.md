@@ -11,8 +11,8 @@ Tudo roda no seu computador: sem APIs pagas, sem nuvem, funcionando offline depo
 | Fase | Nome | Status |
 |---|---|---|
 | 1 | Fundação | ✅ Concluída (aguardando validação no PC Windows) |
-| 2 | Importação | ⏳ Aguardando autorização |
-| 3 | Transcrição (Faster-Whisper) | — |
+| 2 | Importação | ✅ Concluída (aguardando validação no PC Windows) |
+| 3 | Transcrição (Faster-Whisper) | ⏳ Aguardando autorização |
 | 4 | Inteligência artificial (Ollama + Qwen3 4B) | — |
 | 5 | Edição automática (FFmpeg, 9:16, legendas) | — |
 | 6 | Aprovação | — |
@@ -48,7 +48,7 @@ gta-clips-ai/
 - **Python 3.11** e **uv** (gerenciador de pacotes Python) — `winget install astral-sh.uv`
 - **Node.js 20.9+** (recomendado 22 LTS)
 - **Git**
-- **FFmpeg** (opcional na Fase 1; necessário a partir da Fase 2)
+- **FFmpeg** (inclui o FFprobe, usado para ler os metadados dos vídeos a partir da Fase 2)
 
 > Nada disso é instalado automaticamente. Cada instalação será combinada antes.
 
@@ -90,6 +90,24 @@ npm run typecheck       # TypeScript strict
 npm run lint
 npm run build
 ```
+
+## Importando gravações (Fase 2)
+
+1. Em **Configurações**, defina as pastas do HD externo e clique em **Criar pastas que faltam**.
+2. Em **Lives**:
+   - **Escanear pasta de originais** registra todos os vídeos que já estão na pasta de originais
+     (inclusive em subpastas). Rodar de novo não duplica nada.
+   - **Importar arquivo** copia um vídeo de outra pasta (ex.: a pasta do OBS) para os originais.
+     Dica: no Explorador, `Shift` + botão direito no vídeo → **Copiar como caminho**.
+3. Duração, resolução, FPS, codecs e faixas de áudio são lidos com o FFprobe.
+4. Cópias e varreduras rodam em segundo plano, com progresso e botão de cancelar.
+
+Regras de segurança dos arquivos:
+- O arquivo original **nunca é movido nem apagado**; a importação só copia.
+- A cópia é feita em um arquivo temporário `.part`, renomeado só no final. Se cancelar ou der
+  erro, o temporário é removido.
+- A cópia é recusada se for deixar menos de 1 GB livre no HD.
+- **Remover da biblioteca** apaga só o registro; o vídeo continua no disco.
 
 ## Princípios
 

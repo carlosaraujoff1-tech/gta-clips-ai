@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { LivesView } from "@/features/library/library-views";
+import { LivesView } from "@/features/lives/lives-view";
 
 export const metadata: Metadata = { title: "Lives" };
 

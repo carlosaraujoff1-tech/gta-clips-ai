@@ -3,8 +3,9 @@
 Video files are **never** stored in the database: rows only keep the path of
 the file on disk plus its metadata.
 
-Phase 1 only creates the tables. They are filled by later phases:
+Tables and the phase that fills them:
 - ``recordings``   -> Phase 2 (import)
+- ``jobs``         -> Phase 2+ (background tasks: import, probing, later transcription/rendering)
 - ``clips``        -> Phases 4/5 (AI selection and rendering)
 - ``publications`` -> Phase 7 (publishing, always after explicit approval)
 """
@@ -15,7 +16,18 @@ import enum
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -50,6 +62,20 @@ class ClipStatus(enum.StrEnum):
     FAILED = "failed"
 
 
+class JobType(enum.StrEnum):
+    SCAN_ORIGINALS = "scan_originals"
+    IMPORT_FILE = "import_file"
+    PROBE_RECORDING = "probe_recording"
+
+
+class JobStatus(enum.StrEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
 class Platform(enum.StrEnum):
     TIKTOK = "tiktok"
     YOUTUBE_SHORTS = "youtube_shorts"
@@ -70,11 +96,22 @@ class Recording(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     file_path: Mapped[str] = mapped_column(String(1024), unique=True, nullable=False)
-    file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    # BigInteger: lives easily exceed 2 GB (would overflow a 32-bit column on PostgreSQL).
+    file_size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    file_modified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    # Metadata read with ffprobe. ``None`` until probing succeeds.
     duration_seconds: Mapped[float | None] = mapped_column(Float)
     width: Mapped[int | None] = mapped_column(Integer)
     height: Mapped[int | None] = mapped_column(Integer)
     fps: Mapped[float | None] = mapped_column(Float)
+    container: Mapped[str | None] = mapped_column(String(64))
+    video_codec: Mapped[str | None] = mapped_column(String(32))
+    audio_codec: Mapped[str | None] = mapped_column(String(32))
+    audio_tracks: Mapped[int | None] = mapped_column(Integer)
+    bitrate_kbps: Mapped[int | None] = mapped_column(Integer)
+    probed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[RecordingStatus] = mapped_column(
         _enum(RecordingStatus), default=RecordingStatus.IMPORTED, nullable=False, index=True
@@ -129,3 +166,23 @@ class AppSetting(TimestampMixin, Base):
 
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     value: Mapped[Any] = mapped_column(JSON, nullable=False)
+
+
+class Job(TimestampMixin, Base):
+    """A long-running task executed by the background worker (see ``app.jobs``)."""
+
+    __tablename__ = "jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    type: Mapped[JobType] = mapped_column(_enum(JobType), nullable=False, index=True)
+    status: Mapped[JobStatus] = mapped_column(
+        _enum(JobStatus), default=JobStatus.QUEUED, nullable=False, index=True
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # 0.0 - 1.0
+    message: Mapped[str | None] = mapped_column(String(300))
+    error: Mapped[str | None] = mapped_column(Text)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

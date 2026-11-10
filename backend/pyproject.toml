@@ -34,6 +34,7 @@ known-third-party = ["alembic"]
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/**" = ["E501"]
+"tests/**" = ["S603", "S607"]  # tests run ffmpeg to generate sample videos
 
 [tool.mypy]
 python_version = "3.11"

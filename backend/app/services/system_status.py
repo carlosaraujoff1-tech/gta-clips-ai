@@ -12,8 +12,6 @@ import importlib.util
 import os
 import platform
 import re
-import shutil
-import subprocess
 import sys
 import time
 from typing import Literal
@@ -24,13 +22,19 @@ from pydantic import BaseModel
 from app.core.config import APP_VERSION
 from app.core.logging import get_logger
 from app.schemas.settings import UserSettings
+from app.services.tools import (
+    ToolName,
+    ToolNotFoundError,
+    ToolTimeoutError,
+    resolve_tool,
+    run_tool,
+)
 
 log = get_logger(__name__)
 
 State = Literal["ok", "warning", "missing", "error", "not_implemented"]
 CACHE_TTL_SECONDS = 30.0
 SUBPROCESS_TIMEOUT_SECONDS = 10
-_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)  # avoid console flashes on Windows
 
 
 class ServiceStatus(BaseModel):
@@ -56,28 +60,12 @@ class SystemStatus(BaseModel):
     services: list[ServiceStatus]
 
 
-def _run_fixed(executable: str, args: list[str]) -> str | None:
+def _run_fixed(tool: ToolName, settings: UserSettings, args: list[str]) -> str | None:
     try:
-        result = subprocess.run(  # noqa: S603 - fixed executable and arguments, no shell
-            [executable, *args],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=SUBPROCESS_TIMEOUT_SECONDS,
-            check=False,
-            creationflags=_NO_WINDOW,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        log.warning("tool_probe_failed", executable=os.path.basename(executable), error=str(exc))
+        result = run_tool(tool, settings.tools, args, timeout=SUBPROCESS_TIMEOUT_SECONDS)
+    except (ToolNotFoundError, ToolTimeoutError):
         return None
     return result.stdout if result.returncode == 0 else None
-
-
-def _resolve(name: str, configured: str | None) -> str | None:
-    if configured:
-        return configured if os.path.isfile(configured) else None
-    return shutil.which(name)
 
 
 def _first_version(output: str, name: str) -> str | None:
@@ -87,10 +75,14 @@ def _first_version(output: str, name: str) -> str | None:
 
 def _check_ffmpeg_family(settings: UserSettings) -> list[ServiceStatus]:
     statuses: list[ServiceStatus] = []
-    ffmpeg = _resolve("ffmpeg", settings.tools.ffmpeg_path)
-    ffprobe = _resolve("ffprobe", settings.tools.ffprobe_path)
+    ffmpeg = resolve_tool("ffmpeg", settings.tools)
+    ffprobe = resolve_tool("ffprobe", settings.tools)
 
-    for key, exe, phase in (("ffmpeg", ffmpeg, 5), ("ffprobe", ffprobe, 2)):
+    checks: tuple[tuple[ToolName, str | None, int], ...] = (
+        ("ffmpeg", ffmpeg, 5),
+        ("ffprobe", ffprobe, 2),
+    )
+    for key, exe, phase in checks:
         if exe is None:
             where = (
                 "no caminho configurado" if getattr(settings.tools, f"{key}_path") else "no PATH"
@@ -98,14 +90,14 @@ def _check_ffmpeg_family(settings: UserSettings) -> list[ServiceStatus]:
             statuses.append(
                 ServiceStatus(
                     key=key,
-                    name=key.upper() if key == "ffmpeg" else "FFprobe",
+                    name="FFmpeg" if key == "ffmpeg" else "FFprobe",
                     state="missing",
                     detail=f"Não encontrado {where}.",
                     phase=phase,
                 )
             )
             continue
-        out = _run_fixed(exe, ["-hide_banner", "-version"])
+        out = _run_fixed(key, settings, ["-hide_banner", "-version"])
         version = _first_version(out, key) if out else None
         statuses.append(
             ServiceStatus(
@@ -120,7 +112,7 @@ def _check_ffmpeg_family(settings: UserSettings) -> list[ServiceStatus]:
 
     # Hardware encoders: AMD AMF on the RX 7600, with libx264 as the CPU fallback.
     if ffmpeg is not None:
-        encoders = _run_fixed(ffmpeg, ["-hide_banner", "-encoders"]) or ""
+        encoders = _run_fixed("ffmpeg", settings, ["-hide_banner", "-encoders"]) or ""
         amf = [e for e in ("h264_amf", "hevc_amf", "av1_amf") if re.search(rf"\b{e}\b", encoders)]
         has_x264 = bool(re.search(r"\blibx264\b", encoders))
         if amf:

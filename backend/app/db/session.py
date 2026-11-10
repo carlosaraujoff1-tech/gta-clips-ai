@@ -58,6 +58,12 @@ def run_migrations(settings: Settings) -> None:
     log.info("database_ready", path=str(settings.database_path))
 
 
+def get_session_factory() -> sessionmaker[Session]:
+    if _session_factory is None:
+        raise RuntimeError("Database engine not initialised")
+    return _session_factory
+
+
 def get_session() -> Iterator[Session]:
     """FastAPI dependency: one session per request, always closed."""
     if _session_factory is None:
