@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/*
+ * GTA Clips AI — design tokens.
+ * Graphite / navy background, blue and purple accents.
+ */
+@theme {
+  --color-canvas: #0a0d14;
+  --color-surface: #0f1420;
+  --color-card: #131a29;
+  --color-card-hover: #172033;
+  --color-line: #1f2a3f;
+  --color-line-strong: #2b3954;
+
+  --color-ink: #e7ebf3;
+  --color-ink-muted: #94a0b8;
+  --color-ink-faint: #5f6b84;
+
+  --color-accent: #3b82f6;
+  --color-accent-soft: #60a5fa;
+  --color-violet: #8b5cf6;
+  --color-violet-soft: #a78bfa;
+
+  --color-ok: #34d399;
+  --color-warn: #fbbf24;
+  --color-bad: #f87171;
+
+  --font-sans:
+    "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono: "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
+
+  --animate-fade-in: fade-in 0.35s ease-out both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-canvas);
+  background-image:
+    radial-gradient(1200px 600px at 85% -10%, rgb(139 92 246 / 0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgb(59 130 246 / 0.07), transparent 60%);
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: rgb(139 92 246 / 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
