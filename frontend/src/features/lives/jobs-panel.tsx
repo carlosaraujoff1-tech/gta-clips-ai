@@ -33,6 +33,10 @@ export function jobTitle(job: Job): string {
       return `Importação: ${fileName(job.payload.source_path)}`;
     case "probe_recording":
       return "Leitura de metadados";
+    case "download_model":
+      return `Download do modelo ${String(job.payload.model ?? "")}`;
+    case "transcribe_recording":
+      return `Transcrição: ${String(job.payload.title ?? `gravação #${String(job.payload.recording_id)}`)}`;
   }
 }
 

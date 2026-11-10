@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     def log_dir(self) -> Path:
         return self.data_dir / "logs"
 
+    @property
+    def models_dir(self) -> Path:
+        """AI models (SSD). Downloaded once, then used offline."""
+        return self.data_dir / "models"
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

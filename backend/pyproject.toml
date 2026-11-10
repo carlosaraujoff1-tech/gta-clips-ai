@@ -12,6 +12,7 @@ dependencies = [
     "alembic>=1.13,<2.0",
     "structlog>=24.1",
     "httpx>=0.27,<1.0",
+    "faster-whisper>=1.1,<2",
 ]
 
 [dependency-groups]
@@ -41,6 +42,10 @@ python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
 exclude = ["alembic/"]
+
+[[tool.mypy.overrides]]
+module = ["faster_whisper", "faster_whisper.*"]
+ignore_missing_imports = true  # the package ships no type information
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

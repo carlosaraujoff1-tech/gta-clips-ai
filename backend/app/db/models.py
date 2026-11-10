@@ -5,7 +5,8 @@ the file on disk plus its metadata.
 
 Tables and the phase that fills them:
 - ``recordings``   -> Phase 2 (import)
-- ``jobs``         -> Phase 2+ (background tasks: import, probing, later transcription/rendering)
+- ``jobs``         -> Phase 2+ (background tasks: import, probing, transcription, ...)
+- ``transcripts``  -> Phase 3 (Faster-Whisper), with ``transcript_segments``
 - ``clips``        -> Phases 4/5 (AI selection and rendering)
 - ``publications`` -> Phase 7 (publishing, always after explicit approval)
 """
@@ -66,6 +67,8 @@ class JobType(enum.StrEnum):
     SCAN_ORIGINALS = "scan_originals"
     IMPORT_FILE = "import_file"
     PROBE_RECORDING = "probe_recording"
+    DOWNLOAD_MODEL = "download_model"
+    TRANSCRIBE_RECORDING = "transcribe_recording"
 
 
 class JobStatus(enum.StrEnum):
@@ -119,6 +122,55 @@ class Recording(TimestampMixin, Base):
     error_message: Mapped[str | None] = mapped_column(Text)
 
     clips: Mapped[list[Clip]] = relationship(back_populates="recording")
+    transcript: Mapped[Transcript | None] = relationship(
+        back_populates="recording", lazy="selectin", cascade="all, delete-orphan"
+    )
+
+
+class Transcript(TimestampMixin, Base):
+    """The current transcription of a recording (re-transcribing replaces it)."""
+
+    __tablename__ = "transcripts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    recording_id: Mapped[int] = mapped_column(
+        ForeignKey("recordings.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    model: Mapped[str] = mapped_column(String(32), nullable=False)
+    language: Mapped[str | None] = mapped_column(String(8))
+    language_probability: Mapped[float | None] = mapped_column(Float)
+    audio_track: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    audio_duration_seconds: Mapped[float | None] = mapped_column(Float)
+    processing_seconds: Mapped[float | None] = mapped_column(Float)
+    segment_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    recording: Mapped[Recording] = relationship(back_populates="transcript")
+    segments: Mapped[list[TranscriptSegment]] = relationship(
+        back_populates="transcript",
+        order_by="TranscriptSegment.position",
+        cascade="all, delete-orphan",
+        lazy="raise",  # always loaded explicitly: a live can have thousands of segments
+    )
+
+
+class TranscriptSegment(Base):
+    __tablename__ = "transcript_segments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    transcript_id: Mapped[int] = mapped_column(
+        ForeignKey("transcripts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_seconds: Mapped[float] = mapped_column(Float, nullable=False)
+    end_seconds: Mapped[float] = mapped_column(Float, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    avg_logprob: Mapped[float | None] = mapped_column(Float)
+    no_speech_prob: Mapped[float | None] = mapped_column(Float)
+    # [[start, end, "word", probability], ...] — used for word-synced subtitles (Phase 5).
+    words: Mapped[list[Any] | None] = mapped_column(JSON)
+
+    transcript: Mapped[Transcript] = relationship(back_populates="segments")
 
 
 class Clip(TimestampMixin, Base):

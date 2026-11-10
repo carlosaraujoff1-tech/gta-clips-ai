@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from app.core.logging import get_logger
-from app.db.models import JobType, Recording
-from app.jobs.runner import Handler, JobContext, JobFailedError
+from app.db.models import Recording
+from app.jobs.runner import JobContext, JobFailedError
 from app.schemas.settings import UserSettings
 from app.services import library
 
@@ -165,10 +165,3 @@ def probe_recording(ctx: JobContext) -> dict[str, Any]:
             raise JobFailedError(recording.error_message or "Falha ao ler metadados.")
     ctx.progress(1.0, "Metadados atualizados.", force=True)
     return {"recording_id": recording_id}
-
-
-HANDLERS: dict[JobType, Handler] = {
-    JobType.SCAN_ORIGINALS: scan_originals,
-    JobType.IMPORT_FILE: import_file,
-    JobType.PROBE_RECORDING: probe_recording,
-}

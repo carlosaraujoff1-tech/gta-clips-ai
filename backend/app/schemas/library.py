@@ -45,6 +45,7 @@ class RecordingOut(BaseModel):
     updated_at: datetime
     # Computed at read time: False when the file was moved/deleted or the HD is unplugged.
     file_exists: bool = True
+    has_transcript: bool = False
 
 
 class RecordingUpdate(BaseModel):

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AudioLines,
   BrainCircuit,
   Cpu,
   FolderPlus,
@@ -35,9 +36,12 @@ import type {
   StorageStatus,
   SystemStatus,
   UserSettings,
+  WhisperLanguage,
   WhisperModel,
 } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
+
+import { WhisperModels } from "./whisper-models";
 
 const STORAGE_FIELDS: Array<{ key: StorageKey; label: string; folder: string; hint: string }> = [
   { key: "originals", label: "Originais", folder: "originals", hint: "Lives e gravações brutas." },
@@ -423,11 +427,69 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
       </Card>
 
       {/* ---------- AI ---------- */}
-      <Card title="Inteligência artificial local" icon={BrainCircuit}>
+      <Card title="Transcrição (Whisper)" icon={AudioLines}>
+        <div className="mb-5 grid gap-5 md:grid-cols-3">
+          <Field label="Modelo" htmlFor="whisper" hint="Roda na CPU (int8). small é o recomendado.">
+            <select
+              id="whisper"
+              className={inputClass}
+              value={form.ai.whisper_model}
+              onChange={(e) => update("ai", { whisper_model: e.target.value as WhisperModel })}
+            >
+              {WHISPER_MODELS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field
+            label="Idioma das lives"
+            htmlFor="whisper-lang"
+            hint="Fixar o idioma evita erros de detecção."
+          >
+            <select
+              id="whisper-lang"
+              className={inputClass}
+              value={form.ai.whisper_language}
+              onChange={(e) =>
+                update("ai", { whisper_language: e.target.value as WhisperLanguage })
+              }
+            >
+              <option value="pt">Português</option>
+              <option value="auto">Detectar automaticamente</option>
+              <option value="en">Inglês</option>
+              <option value="es">Espanhol</option>
+            </select>
+          </Field>
+          <Field
+            label="Threads de CPU"
+            htmlFor="whisper-threads"
+            hint="0 = automático (1 por núcleo físico; 6 no Ryzen 5 5500)."
+          >
+            <input
+              id="whisper-threads"
+              type="number"
+              min={0}
+              max={64}
+              className={inputClass}
+              value={form.ai.whisper_cpu_threads}
+              onChange={(e) =>
+                update("ai", {
+                  whisper_cpu_threads: Math.max(0, Math.min(64, Number(e.target.value) || 0)),
+                })
+              }
+            />
+          </Field>
+        </div>
+        <WhisperModels selected={saved.ai.whisper_model} />
+      </Card>
+
+      <Card title="Análise com IA (Ollama)" icon={BrainCircuit}>
         <p className="mb-4 text-xs text-ink-muted">
-          Estas preferências já ficam salvas, mas só passam a ser usadas nas fases indicadas.
+          Estas preferências já ficam salvas, mas só passam a ser usadas na Fase 4.
         </p>
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2">
           <Field
             label="Endereço do Ollama"
             htmlFor="ollama-url"
@@ -461,28 +523,6 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
               onChange={(e) => update("ai", { ollama_model: e.target.value })}
               spellCheck={false}
             />
-          </Field>
-          <Field
-            label="Modelo de transcrição (Whisper)"
-            htmlFor="whisper"
-            hint={
-              <span className="inline-flex items-center gap-1.5">
-                Roda na CPU (int8) <PhaseBadge phase={3} />
-              </span>
-            }
-          >
-            <select
-              id="whisper"
-              className={inputClass}
-              value={form.ai.whisper_model}
-              onChange={(e) => update("ai", { whisper_model: e.target.value as WhisperModel })}
-            >
-              {WHISPER_MODELS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
           </Field>
         </div>
       </Card>

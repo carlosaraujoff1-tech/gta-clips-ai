@@ -68,3 +68,27 @@ def run_tool(tool: ToolName, settings: ToolSettings, args: list[str], timeout: f
         log.warning("tool_failed_to_start", tool=tool, error=str(exc))
         raise ToolNotFoundError(tool) from exc
     return ToolResult(completed.returncode, completed.stdout, completed.stderr)
+
+
+def start_tool(tool: ToolName, settings: ToolSettings, args: list[str]) -> subprocess.Popen[str]:
+    """Starts a long-running tool (e.g. an ffmpeg conversion) whose output is read as it runs.
+
+    The caller owns the process and must wait for it or terminate it.
+    """
+    executable = resolve_tool(tool, settings)
+    if executable is None:
+        raise ToolNotFoundError(tool)
+    try:
+        return subprocess.Popen(  # noqa: S603 - allow-listed executable, list args, no shell
+            [executable, *args],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            creationflags=_NO_WINDOW,
+        )
+    except OSError as exc:
+        log.warning("tool_failed_to_start", tool=tool, error=str(exc))
+        raise ToolNotFoundError(tool) from exc

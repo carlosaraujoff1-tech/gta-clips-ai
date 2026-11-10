@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 MAX_PATH_LENGTH = 240  # stays below the classic Windows MAX_PATH (260) with room for files
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 WhisperModel = Literal["tiny", "base", "small", "medium", "large-v3"]
+WhisperLanguage = Literal["pt", "auto", "en", "es"]
 
 STORAGE_FOLDER_KEYS = ("originals", "processing", "clips", "exports")
 
@@ -101,6 +102,9 @@ class AISettings(_Strict):
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = Field(default="qwen3:4b", min_length=1, max_length=100)
     whisper_model: WhisperModel = "small"
+    whisper_language: WhisperLanguage = "pt"
+    # 0 = automatic (one thread per physical core: 6 on a Ryzen 5 5500).
+    whisper_cpu_threads: int = Field(default=0, ge=0, le=64)
 
     @field_validator("ollama_base_url")
     @classmethod

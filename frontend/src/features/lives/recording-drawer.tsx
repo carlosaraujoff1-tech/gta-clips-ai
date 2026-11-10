@@ -1,6 +1,18 @@
 "use client";
 
-import { Check, Copy, RefreshCw, Save, Trash2, TriangleAlert, X } from "lucide-react";
+import {
+  AudioLines,
+  Check,
+  Copy,
+  FileText,
+  LoaderCircle,
+  RefreshCw,
+  Save,
+  Trash2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { RecordingStatusBadge } from "@/components/status";
@@ -8,6 +20,8 @@ import { Button, Field, inputClass, cx } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { formatBytes, formatDate, formatDuration } from "@/lib/format";
 import type { Job, Recording } from "@/lib/types";
+
+import { TranscriptViewer } from "./transcript-viewer";
 
 function Meta({ label, value }: { label: string; value: string }) {
   return (
@@ -31,7 +45,9 @@ export function RecordingDrawer({
 }) {
   const [title, setTitle] = useState(recording.title);
   const [notes, setNotes] = useState(recording.notes ?? "");
-  const [busy, setBusy] = useState<"save" | "probe" | "delete" | null>(null);
+  const [busy, setBusy] = useState<"save" | "probe" | "delete" | "transcribe" | null>(null);
+  const [audioTrack, setAudioTrack] = useState(0);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -39,14 +55,18 @@ export function RecordingDrawer({
   const dirty = title !== recording.title || notes !== (recording.notes ?? "");
 
   useEffect(() => {
+    if (viewerOpen) return; // Escape closes the transcript viewer first
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, viewerOpen]);
 
-  async function run(kind: "save" | "probe" | "delete", action: () => Promise<void>) {
+  async function run(
+    kind: "save" | "probe" | "delete" | "transcribe",
+    action: () => Promise<void>,
+  ) {
     setBusy(kind);
     setMessage(null);
     try {
@@ -82,6 +102,15 @@ export function RecordingDrawer({
       await api.delete(`/recordings/${recording.id}`);
       onChanged();
       onClose();
+    });
+
+  const transcribe = () =>
+    run("transcribe", async () => {
+      const job = await api.post<Job>(`/recordings/${recording.id}/transcribe`, {
+        audio_track: audioTrack,
+      });
+      onJobStarted(job);
+      setMessage({ ok: true, text: "Transcrição adicionada à fila. Acompanhe em Tarefas." });
     });
 
   async function copyPath() {
@@ -182,6 +211,70 @@ export function RecordingDrawer({
 
           <section>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-faint">
+              Transcrição
+            </h3>
+            <div className="rounded-xl border border-line bg-canvas/40 p-3">
+              {r.status === "transcribing" ? (
+                <p className="flex items-center gap-2 text-sm text-accent-soft">
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                  Transcrevendo… acompanhe o progresso em Tarefas.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-ink-muted">
+                    {r.has_transcript
+                      ? "Esta gravação já foi transcrita."
+                      : r.audio_tracks === 0
+                        ? "Esta gravação não tem áudio para transcrever."
+                        : "Ainda não transcrita."}
+                  </p>
+                  {(r.audio_tracks ?? 0) > 1 ? (
+                    <div className="mt-3">
+                      <Field
+                        label="Faixa de áudio"
+                        htmlFor="rec-track"
+                        hint="No OBS, a faixa 1 normalmente tem tudo misturado (jogo + microfone)."
+                      >
+                        <select
+                          id="rec-track"
+                          className={inputClass}
+                          value={audioTrack}
+                          onChange={(e) => setAudioTrack(Number(e.target.value))}
+                        >
+                          {Array.from({ length: r.audio_tracks ?? 1 }, (_, i) => (
+                            <option key={i} value={i}>
+                              Faixa {i + 1}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {r.has_transcript ? (
+                      <Button variant="primary" icon={FileText} onClick={() => setViewerOpen(true)}>
+                        Ver transcrição
+                      </Button>
+                    ) : null}
+                    {r.audio_tracks !== 0 ? (
+                      <Button
+                        variant={r.has_transcript ? "secondary" : "primary"}
+                        icon={AudioLines}
+                        onClick={transcribe}
+                        loading={busy === "transcribe"}
+                        disabled={busy !== null || !r.file_exists}
+                      >
+                        {r.has_transcript ? "Transcrever novamente" : "Transcrever"}
+                      </Button>
+                    ) : null}
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-faint">
               Metadados
             </h3>
             <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -236,6 +329,14 @@ export function RecordingDrawer({
           {message ? (
             <p role="status" className={cx("text-sm", message.ok ? "text-ok" : "text-bad")}>
               {message.text}
+              {!message.ok && message.text.includes("Configurações") ? (
+                <Link
+                  href="/configuracoes"
+                  className="ml-1 text-accent-soft underline hover:text-ink"
+                >
+                  Abrir Configurações
+                </Link>
+              ) : null}
             </p>
           ) : null}
         </div>
@@ -279,6 +380,9 @@ export function RecordingDrawer({
           </div>
         </footer>
       </aside>
+      {viewerOpen ? (
+        <TranscriptViewer recordingId={r.id} title={r.title} onClose={() => setViewerOpen(false)} />
+      ) : null}
     </div>
   );
 }

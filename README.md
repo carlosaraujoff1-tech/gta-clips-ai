@@ -12,8 +12,8 @@ Tudo roda no seu computador: sem APIs pagas, sem nuvem, funcionando offline depo
 |---|---|---|
 | 1 | Fundação | ✅ Concluída (aguardando validação no PC Windows) |
 | 2 | Importação | ✅ Concluída (aguardando validação no PC Windows) |
-| 3 | Transcrição (Faster-Whisper) | ⏳ Aguardando autorização |
-| 4 | Inteligência artificial (Ollama + Qwen3 4B) | — |
+| 3 | Transcrição (Faster-Whisper) | ✅ Concluída (aguardando validação no PC Windows) |
+| 4 | Inteligência artificial (Ollama + Qwen3 4B) | ⏳ Aguardando autorização |
 | 5 | Edição automática (FFmpeg, 9:16, legendas) | — |
 | 6 | Aprovação | — |
 | 7 | Publicação | — |
@@ -108,6 +108,23 @@ Regras de segurança dos arquivos:
   erro, o temporário é removido.
 - A cópia é recusada se for deixar menos de 1 GB livre no HD.
 - **Remover da biblioteca** apaga só o registro; o vídeo continua no disco.
+
+## Transcrevendo (Fase 3)
+
+1. Em **Configurações → Transcrição (Whisper)**, clique em **Baixar** no modelo `small`
+   (~480 MB, precisa de internet **uma única vez**). O modelo fica em `backend/data/models` no SSD.
+2. Em **Lives**, abra uma gravação e clique em **Transcrever** (escolha a faixa de áudio se a
+   live tiver mais de uma), ou use **Transcrever pendentes** para enfileirar todas.
+3. Acompanhe em **Tarefas**: extração do áudio, progresso e tempo restante estimado.
+4. **Ver transcrição** mostra o texto com horários, busca (ignora acentos) e exporta SRT, VTT
+   ou TXT.
+
+Detalhes técnicos:
+- Roda **na CPU** (int8). O Faster-Whisper não tem aceleração para GPUs AMD no Windows.
+- Silêncios são pulados (VAD), o que acelera bastante lives longas.
+- Os horários de cada palavra são guardados para as legendas sincronizadas da Fase 5.
+- O áudio temporário (WAV) vai para a pasta de processamento e é apagado ao final, mesmo se
+  der erro ou for cancelado.
 
 ## Princípios
 

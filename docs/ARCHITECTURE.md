@@ -79,6 +79,21 @@ Job types (Phase 2): `scan_originals`, `import_file`, `probe_recording`. Duplica
 - `file_exists` is computed on read, so an unplugged drive shows as "Arquivo não encontrado"
   instead of breaking the library.
 
+### Transcription (Phase 3)
+
+- `services/audio.py`: ffmpeg extracts the chosen audio stream (`-map 0:a:N`) to 16 kHz mono
+  WAV in the *processing* folder, reporting progress via `-progress pipe:1`. Killed on cancel.
+- `services/whisper.py`: model registry (Systran CTranslate2 conversions), explicit one-time
+  download into `<data_dir>/models/whisper/<name>` (marker file written only on success),
+  model loading from that local path (never downloads implicitly), CPU int8, VAD, word
+  timestamps, `condition_on_previous_text=False` to avoid repetition loops on long audio.
+  Xet transfer and telemetry are disabled for `huggingface_hub` (plain HTTPS, local-first).
+- `jobs/transcription.py`: `transcribe_recording` (extract → transcribe → atomically replace
+  the previous transcript) and `download_model`. Recording status moves to `transcribing` and is
+  restored on failure/cancel/restart; temp WAVs are always deleted.
+- Storage: `transcripts` (one per recording) and `transcript_segments` (text, timings,
+  confidence and per-word timings as JSON). Exports (SRT/VTT/TXT) are generated on demand.
+
 ## Frontend
 
 - Next.js App Router, TypeScript `strict`, Tailwind v4 design tokens in `src/app/globals.css`.

@@ -33,6 +33,7 @@ class RecordingSort(StrEnum):
 def to_out(recording: Recording) -> RecordingOut:
     out = RecordingOut.model_validate(recording)
     out.file_exists = os.path.isfile(recording.file_path)
+    out.has_transcript = recording.transcript is not None
     return out
 
 

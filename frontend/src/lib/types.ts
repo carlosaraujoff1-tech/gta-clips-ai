@@ -39,6 +39,7 @@ export interface Recording {
   created_at: string;
   updated_at: string;
   file_exists: boolean;
+  has_transcript: boolean;
 }
 
 export type RecordingSort = "recent" | "recorded" | "title" | "duration" | "size";
@@ -50,7 +51,8 @@ export interface LibraryStats {
   missing_metadata: number;
 }
 
-export type JobType = "scan_originals" | "import_file" | "probe_recording";
+export type JobType =
+  "scan_originals" | "import_file" | "probe_recording" | "download_model" | "transcribe_recording";
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export interface Job {
@@ -110,11 +112,18 @@ export interface DashboardSummary {
 
 export type StorageKey = "originals" | "processing" | "clips" | "exports";
 export type WhisperModel = "tiny" | "base" | "small" | "medium" | "large-v3";
+export type WhisperLanguage = "pt" | "auto" | "en" | "es";
 
 export interface UserSettings {
   storage: Record<StorageKey, string | null>;
   tools: { ffmpeg_path: string | null; ffprobe_path: string | null };
-  ai: { ollama_base_url: string; ollama_model: string; whisper_model: WhisperModel };
+  ai: {
+    ollama_base_url: string;
+    ollama_model: string;
+    whisper_model: WhisperModel;
+    whisper_language: WhisperLanguage;
+    whisper_cpu_threads: number;
+  };
 }
 
 export interface FolderStatus {
@@ -163,4 +172,42 @@ export interface Health {
   app: string;
   version: string;
   time: string;
+}
+
+export interface WhisperModelInfo {
+  name: WhisperModel;
+  downloaded: boolean;
+  size_on_disk_bytes: number | null;
+  approx_download_bytes: number;
+  note: string;
+  selected: boolean;
+}
+
+export interface TranscriptionStatus {
+  engine_installed: boolean;
+  models_dir: string;
+  cpu_threads: number;
+  models: WhisperModelInfo[];
+}
+
+export interface TranscriptSegment {
+  position: number;
+  start_seconds: number;
+  end_seconds: number;
+  text: string;
+}
+
+export interface Transcript {
+  id: number;
+  recording_id: number;
+  model: string;
+  language: string | null;
+  language_probability: number | null;
+  audio_track: number;
+  audio_duration_seconds: number | null;
+  processing_seconds: number | null;
+  segment_count: number;
+  word_count: number;
+  created_at: string;
+  segments: TranscriptSegment[];
 }

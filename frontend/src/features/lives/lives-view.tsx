@@ -2,6 +2,7 @@
 
 import {
   ArrowDownWideNarrow,
+  AudioLines,
   Clock,
   FileVideo,
   FolderSearch,
@@ -141,6 +142,8 @@ export function LivesView() {
   const [jobsKey, setJobsKey] = useState(0);
   const [scanning, setScanning] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionInfo, setActionInfo] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   // Debounce the search box so typing doesn't fire a request per key.
   useEffect(() => {
@@ -162,6 +165,27 @@ export function LivesView() {
 
   // Re-fetch the task list right away so the new task shows up without waiting for the poll.
   const jobStarted = useCallback(() => setJobsKey((k) => k + 1), []);
+
+  async function transcribePending() {
+    setBulkBusy(true);
+    setActionError(null);
+    setActionInfo(null);
+    try {
+      const result = await api.post<{ queued: number; skipped: number }>(
+        "/recordings/transcribe-pending",
+      );
+      setActionInfo(
+        result.queued === 0
+          ? "Nenhuma gravação pendente de transcrição."
+          : `${result.queued} gravação(ões) adicionada(s) à fila de transcrição. Elas serão processadas uma por vez.`,
+      );
+      jobStarted();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Erro ao iniciar as transcrições.");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   async function scan() {
     setScanning(true);
@@ -185,6 +209,9 @@ export function LivesView() {
         description="Importe e organize suas lives e gravações de GTA RP. Os vídeos ficam no HD externo; o sistema guarda só o caminho e os metadados."
         actions={
           <>
+            <Button icon={AudioLines} onClick={transcribePending} loading={bulkBusy}>
+              Transcrever pendentes
+            </Button>
             <Button icon={FolderSearch} onClick={scan} loading={scanning}>
               Escanear pasta de originais
             </Button>
@@ -207,6 +234,15 @@ export function LivesView() {
             </Link>
           ) : null}
         </div>
+      ) : null}
+
+      {actionInfo ? (
+        <p
+          role="status"
+          className="mb-4 rounded-xl border border-ok/25 bg-ok/[0.05] px-4 py-3 text-sm text-ok"
+        >
+          {actionInfo}
+        </p>
       ) : null}
 
       <StatsStrip stats={stats.data} />

@@ -15,14 +15,25 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.routes import dashboard, health, jobs, library, recordings, settings, system
+from app.api.routes import (
+    dashboard,
+    health,
+    jobs,
+    library,
+    recordings,
+    settings,
+    system,
+    transcription,
+)
 from app.core.config import APP_NAME, APP_VERSION, Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import CLIENT_HEADER, LocalClientGuardMiddleware, RequestContextMiddleware
 from app.db.session import dispose_engine, get_session_factory, init_engine, run_migrations
-from app.jobs.handlers import HANDLERS
+from app.jobs.registry import build_handlers
 from app.jobs.runner import JobRunner
+from app.jobs.transcription import recover_after_restart
+from app.services.user_settings import load_user_settings
 
 log = get_logger(__name__)
 
@@ -35,7 +46,11 @@ def create_app(config: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         init_engine(config)
         run_migrations(config)
-        runner = JobRunner(get_session_factory(), HANDLERS)
+        session_factory = get_session_factory()
+        with session_factory() as session:
+            recover_after_restart(session, load_user_settings(session).storage.processing)
+        runner = JobRunner(session_factory, build_handlers(config))
+        app.state.config = config
         app.state.job_runner = runner
         runner.start()
         log.info("backend_started", version=APP_VERSION, host=config.host, port=config.port)
@@ -61,7 +76,16 @@ def create_app(config: Settings | None = None) -> FastAPI:
     register_error_handlers(app)
 
     api = APIRouter(prefix="/api")
-    for module in (health, dashboard, settings, system, recordings, jobs, library):
+    for module in (
+        health,
+        dashboard,
+        settings,
+        system,
+        recordings,
+        transcription,
+        jobs,
+        library,
+    ):
         api.include_router(module.router)
     app.include_router(api)
     return app
