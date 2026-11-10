@@ -48,7 +48,7 @@ def test_dashboard_starts_empty(client: TestClient) -> None:
 def test_default_settings_have_no_storage(client: TestClient) -> None:
     body = client.get("/api/settings").json()
     assert all(v is None for v in body["storage"].values())
-    assert body["ai"]["ollama_model"] == "qwen3:4b"
+    assert body["ai"]["ollama_model"] == "qwen3:4b-instruct"
 
 
 def test_save_settings_and_create_folders(client: TestClient, tmp_path: Path) -> None:

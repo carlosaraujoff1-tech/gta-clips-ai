@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { ClipsView } from "@/features/library/library-views";
+import { ClipsView } from "@/features/clips/clips-view";
 
 export const metadata: Metadata = { title: "Clips" };
 

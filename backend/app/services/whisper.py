@@ -176,6 +176,12 @@ class TranscriptionInfo:
     duration: float
 
 
+# Words common in Brazilian GTA RP lives that a generic model tends to mishear.
+GTA_RP_HOTWORDS = (
+    "Live de GTA RP. A polícia veio de viatura atrás do carro! Fugimos pro morro e pro beco. "
+    "O mecânico, a fiança, a delegacia, o assalto e o helicóptero."
+)
+
 _model_lock = threading.Lock()
 _loaded: tuple[str, int, FWModel] | None = None
 
@@ -203,6 +209,45 @@ def _load_model(models_root: Path, name: WhisperModel, threads: int) -> FWModel:
         return model
 
 
+SENTENCE_END = (".", "?", "!", "…")
+MIN_SENTENCE_WORDS = 2
+
+
+def split_sentences(seg: SegmentData) -> list[SegmentData]:
+    """Splits a Whisper segment at sentence ends using word timings.
+
+    Whisper sometimes merges several lines (even different speakers) into one long
+    segment; one sentence per segment gives the highlight finder precise boundaries.
+    """
+    if len(seg.words) < 2 * MIN_SENTENCE_WORDS:
+        return [seg]
+    groups: list[list[list[Any]]] = [[]]
+    for i, word in enumerate(seg.words):
+        groups[-1].append(word)
+        token = str(word[2]).strip()
+        remaining = len(seg.words) - i - 1
+        if (
+            token.endswith(SENTENCE_END)
+            and len(groups[-1]) >= MIN_SENTENCE_WORDS
+            and remaining >= MIN_SENTENCE_WORDS
+        ):
+            groups.append([])
+    if len(groups) == 1:
+        return [seg]
+    return [
+        SegmentData(
+            start=float(g[0][0]),
+            end=float(g[-1][1]),
+            text="".join(str(w[2]) for w in g).strip(),
+            avg_logprob=seg.avg_logprob,
+            no_speech_prob=seg.no_speech_prob,
+            words=g,
+        )
+        for g in groups
+        if g
+    ]
+
+
 def transcribe(
     audio_path: Path, models_root: Path, ai: AISettings
 ) -> tuple[TranscriptionInfo, Iterator[SegmentData]]:
@@ -224,6 +269,9 @@ def transcribe(
         vad_parameters={"min_silence_duration_ms": 500},
         word_timestamps=True,  # needed for word-synced subtitles (Phase 5)
         condition_on_previous_text=False,  # avoids repetition loops on long audio
+        # Vocabulary hints applied to every 30 s window (initial_prompt would only
+        # affect the first one when not conditioning on previous text).
+        hotwords=GTA_RP_HOTWORDS if ai.whisper_language in ("pt", "auto") else None,
     )
 
     def produce() -> Iterator[SegmentData]:
@@ -231,16 +279,19 @@ def transcribe(
             text = seg.text.strip()
             if not text:
                 continue
-            yield SegmentData(
-                start=round(seg.start, 3),
-                end=round(seg.end, 3),
-                text=text,
-                avg_logprob=seg.avg_logprob,
-                no_speech_prob=seg.no_speech_prob,
-                words=[
-                    [round(w.start, 3), round(w.end, 3), w.word, round(w.probability, 3)]
-                    for w in (seg.words or [])
-                ],
+            words = [
+                [round(w.start, 3), round(w.end, 3), w.word, round(w.probability, 3)]
+                for w in (seg.words or [])
+            ]
+            yield from split_sentences(
+                SegmentData(
+                    start=round(seg.start, 3),
+                    end=round(seg.end, 3),
+                    text=text,
+                    avg_logprob=seg.avg_logprob,
+                    no_speech_prob=seg.no_speech_prob,
+                    words=words,
+                )
             )
 
     return (

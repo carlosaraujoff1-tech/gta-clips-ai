@@ -52,7 +52,14 @@ export interface LibraryStats {
 }
 
 export type JobType =
-  "scan_originals" | "import_file" | "probe_recording" | "download_model" | "transcribe_recording";
+  | "scan_originals"
+  | "import_file"
+  | "probe_recording"
+  | "download_model"
+  | "transcribe_recording"
+  | "pull_llm_model"
+  | "analyze_recording"
+  | "render_clip";
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export interface Job {
@@ -79,8 +86,16 @@ export interface Clip {
   end_seconds: number;
   category: string | null;
   score: number | null;
+  reason: string | null;
+  hook: string | null;
+  score_details: { ai: number | null; signals: number; ai_weight: number } | null;
+  source: "ai" | "heuristic";
   status: ClipStatus;
+  rendered_at: string | null;
+  render_error: string | null;
   created_at: string;
+  recording_title: string;
+  has_video: boolean;
 }
 
 export interface Publication {
@@ -123,7 +138,29 @@ export interface UserSettings {
     whisper_model: WhisperModel;
     whisper_language: WhisperLanguage;
     whisper_cpu_threads: number;
+    clip_min_seconds: number;
+    clip_max_seconds: number;
+    max_clips_per_recording: number;
+    min_clip_score: number;
   };
+  render: RenderSettings;
+}
+
+export interface RenderSettings {
+  layout: "blur" | "crop";
+  subtitle_style: "karaoke" | "simple";
+  subtitle_font: string;
+  show_title: boolean;
+  zoom: boolean;
+  target_lufs: number;
+}
+
+export interface AnalysisStatus {
+  ollama_running: boolean;
+  ollama_version: string | null;
+  base_url: string;
+  model: string;
+  model_installed: boolean;
 }
 
 export interface FolderStatus {

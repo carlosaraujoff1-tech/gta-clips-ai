@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   RefreshCw,
   Save,
+  Sparkles,
   Trash2,
   TriangleAlert,
   X,
@@ -32,6 +33,8 @@ function Meta({ label, value }: { label: string; value: string }) {
   );
 }
 
+type Busy = "save" | "probe" | "delete" | "transcribe" | "analyze";
+
 export function RecordingDrawer({
   recording,
   onClose,
@@ -45,7 +48,7 @@ export function RecordingDrawer({
 }) {
   const [title, setTitle] = useState(recording.title);
   const [notes, setNotes] = useState(recording.notes ?? "");
-  const [busy, setBusy] = useState<"save" | "probe" | "delete" | "transcribe" | null>(null);
+  const [busy, setBusy] = useState<Busy | null>(null);
   const [audioTrack, setAudioTrack] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -63,10 +66,7 @@ export function RecordingDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, viewerOpen]);
 
-  async function run(
-    kind: "save" | "probe" | "delete" | "transcribe",
-    action: () => Promise<void>,
-  ) {
+  async function run(kind: Busy, action: () => Promise<void>) {
     setBusy(kind);
     setMessage(null);
     try {
@@ -111,6 +111,16 @@ export function RecordingDrawer({
       });
       onJobStarted(job);
       setMessage({ ok: true, text: "Transcrição adicionada à fila. Acompanhe em Tarefas." });
+    });
+
+  const analyze = (mode: "ai" | "heuristic") =>
+    run("analyze", async () => {
+      const job = await api.post<Job>(`/recordings/${recording.id}/analyze`, { mode });
+      onJobStarted(job);
+      setMessage({
+        ok: true,
+        text: "Análise adicionada à fila. Os momentos encontrados aparecem em Clips.",
+      });
     });
 
   async function copyPath() {
@@ -266,6 +276,59 @@ export function RecordingDrawer({
                       >
                         {r.has_transcript ? "Transcrever novamente" : "Transcrever"}
                       </Button>
+                    ) : null}
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-faint">
+              Melhores momentos
+            </h3>
+            <div className="rounded-xl border border-line bg-canvas/40 p-3">
+              {r.status === "analyzing" ? (
+                <p className="flex items-center gap-2 text-sm text-accent-soft">
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden />A IA está procurando
+                  os melhores momentos… acompanhe em Tarefas.
+                </p>
+              ) : !r.has_transcript ? (
+                <p className="text-sm text-ink-muted">
+                  Transcreva a gravação primeiro: a IA encontra os momentos lendo o que foi falado.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-ink-muted">
+                    {r.status === "analyzed"
+                      ? "Já analisada. Analisar de novo substitui as sugestões não usadas; cortes já gerados são mantidos."
+                      : "A IA lê a transcrição, mede a emoção do áudio e sugere os cortes com nota."}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      variant="primary"
+                      icon={Sparkles}
+                      onClick={() => analyze("ai")}
+                      loading={busy === "analyze"}
+                      disabled={busy !== null}
+                    >
+                      Encontrar melhores momentos
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => analyze("heuristic")}
+                      disabled={busy !== null}
+                      title="Usa só o volume do áudio e palavras-chave. Não precisa do Ollama."
+                    >
+                      Análise rápida (sem IA)
+                    </Button>
+                    {r.status === "analyzed" ? (
+                      <Link
+                        href="/clips"
+                        className="inline-flex h-9 items-center gap-1 px-2 text-sm text-accent-soft hover:text-ink"
+                      >
+                        Ver cortes →
+                      </Link>
                     ) : null}
                   </div>
                 </>

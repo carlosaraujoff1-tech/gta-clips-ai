@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -75,8 +75,17 @@ class ClipOut(BaseModel):
     end_seconds: float
     category: str | None
     score: float | None
+    reason: str | None
+    hook: str | None
+    score_details: dict[str, Any] | None
+    source: str
     status: ClipStatus
+    rendered_at: datetime | None
+    render_error: str | None
     created_at: datetime
+    # Computed at read time.
+    recording_title: str = ""
+    has_video: bool = False
 
 
 class PublicationOut(BaseModel):

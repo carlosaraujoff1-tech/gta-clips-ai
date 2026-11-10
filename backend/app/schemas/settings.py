@@ -100,11 +100,19 @@ class ToolSettings(_Strict):
 
 class AISettings(_Strict):
     ollama_base_url: str = "http://127.0.0.1:11434"
-    ollama_model: str = Field(default="qwen3:4b", min_length=1, max_length=100)
+    # Qwen3 4B *Instruct* (Q4_K_M, ~2.5 GB): answers directly. The plain "qwen3:4b"
+    # tag is the "thinking" variant, which writes long reasoning first (much slower).
+    ollama_model: str = Field(default="qwen3:4b-instruct", min_length=1, max_length=100)
     whisper_model: WhisperModel = "small"
     whisper_language: WhisperLanguage = "pt"
     # 0 = automatic (one thread per physical core: 6 on a Ryzen 5 5500).
     whisper_cpu_threads: int = Field(default=0, ge=0, le=64)
+
+    # Highlight detection (Phase 4)
+    clip_min_seconds: int = Field(default=15, ge=5, le=120)
+    clip_max_seconds: int = Field(default=60, ge=10, le=180)
+    max_clips_per_recording: int = Field(default=8, ge=1, le=50)
+    min_clip_score: int = Field(default=55, ge=0, le=100)
 
     @field_validator("ollama_base_url")
     @classmethod
@@ -118,6 +126,12 @@ class AISettings(_Strict):
             raise ValueError("Informe apenas o endereço base, sem caminho.")
         return value.rstrip("/")
 
+    @model_validator(mode="after")
+    def _clip_bounds(self) -> AISettings:
+        if self.clip_min_seconds >= self.clip_max_seconds:
+            raise ValueError("A duração mínima do corte deve ser menor que a máxima.")
+        return self
+
     @field_validator("ollama_model")
     @classmethod
     def _model_name(cls, value: str) -> str:
@@ -126,10 +140,33 @@ class AISettings(_Strict):
         return value
 
 
+SubtitleStyle = Literal["karaoke", "simple"]
+VerticalLayout = Literal["blur", "crop"]
+
+
+class RenderSettings(_Strict):
+    """Vertical (9:16) export settings. Phase 5 preview: refined in Phase 5."""
+
+    layout: VerticalLayout = "blur"  # blur = gameplay centered over a blurred copy
+    subtitle_style: SubtitleStyle = "karaoke"  # karaoke = current word highlighted
+    subtitle_font: str = Field(default="Arial Black", min_length=1, max_length=60)
+    show_title: bool = True
+    zoom: bool = True  # slow push-in for movement
+    target_lufs: float = Field(default=-14.0, ge=-24.0, le=-9.0)  # TikTok/Shorts/Reels level
+
+    @field_validator("subtitle_font")
+    @classmethod
+    def _font_name(cls, value: str) -> str:
+        if not re.fullmatch(r"[A-Za-z0-9 ._-]+", value):
+            raise ValueError("Nome de fonte inválido.")
+        return value
+
+
 class UserSettings(_Strict):
     storage: StorageSettings = Field(default_factory=StorageSettings)
     tools: ToolSettings = Field(default_factory=ToolSettings)
     ai: AISettings = Field(default_factory=AISettings)
+    render: RenderSettings = Field(default_factory=RenderSettings)
 
 
 class FolderStatus(BaseModel):

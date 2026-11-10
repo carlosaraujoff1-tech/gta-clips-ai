@@ -69,6 +69,9 @@ class JobType(enum.StrEnum):
     PROBE_RECORDING = "probe_recording"
     DOWNLOAD_MODEL = "download_model"
     TRANSCRIBE_RECORDING = "transcribe_recording"
+    PULL_LLM_MODEL = "pull_llm_model"
+    ANALYZE_RECORDING = "analyze_recording"
+    RENDER_CLIP = "render_clip"
 
 
 class JobStatus(enum.StrEnum):
@@ -185,8 +188,15 @@ class Clip(TimestampMixin, Base):
     start_seconds: Mapped[float] = mapped_column(Float, nullable=False)
     end_seconds: Mapped[float] = mapped_column(Float, nullable=False)
     category: Mapped[str | None] = mapped_column(String(50))  # e.g. "perseguição", "engraçado"
-    score: Mapped[float | None] = mapped_column(Float)  # 0-100 quality score from the AI
+    score: Mapped[float | None] = mapped_column(Float)  # 0-100 final quality score
+    # Why the AI picked this moment, the opening line, and how the score was built.
+    reason: Mapped[str | None] = mapped_column(Text)
+    hook: Mapped[str | None] = mapped_column(String(200))
+    score_details: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="ai")  # ai | heuristic
     output_path: Mapped[str | None] = mapped_column(String(1024))
+    rendered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    render_error: Mapped[str | None] = mapped_column(Text)
     status: Mapped[ClipStatus] = mapped_column(
         _enum(ClipStatus), default=ClipStatus.DRAFT, nullable=False, index=True
     )

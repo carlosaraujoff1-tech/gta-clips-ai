@@ -10,7 +10,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
-from app.db.models import Recording, RecordingStatus, Transcript, TranscriptSegment
+from app.db.models import (
+    Clip,
+    ClipStatus,
+    Recording,
+    RecordingStatus,
+    Transcript,
+    TranscriptSegment,
+)
 from app.jobs.runner import JobContext, JobFailedError
 from app.schemas.settings import WhisperModel
 from app.services import whisper
@@ -237,9 +244,11 @@ def make_transcribe_recording(models_root: Path) -> Any:
 
 
 def recover_after_restart(session: Session, processing_folder: str | None) -> None:
-    """Resets recordings left 'transcribing' by a shutdown and removes stale temp audio."""
+    """Resets work left half-done by a shutdown and removes stale temporary files."""
     stuck = session.scalars(
-        select(Recording).where(Recording.status == RecordingStatus.TRANSCRIBING)
+        select(Recording).where(
+            Recording.status.in_((RecordingStatus.TRANSCRIBING, RecordingStatus.ANALYZING))
+        )
     ).all()
     for recording in stuck:
         recording.status = (
@@ -247,9 +256,14 @@ def recover_after_restart(session: Session, processing_folder: str | None) -> No
             if recording.transcript is not None
             else RecordingStatus.IMPORTED
         )
+    rendering = session.scalars(select(Clip).where(Clip.status == ClipStatus.RENDERING)).all()
+    for clip in rendering:
+        clip.status = ClipStatus.PENDING_REVIEW if clip.output_path else ClipStatus.DRAFT
     session.commit()
-    if stuck:
-        log.warning("recordings_status_recovered", count=len(stuck))
+    if stuck or rendering:
+        log.warning("status_recovered", recordings=len(stuck), clips=len(rendering))
     if processing_folder and Path(processing_folder).is_dir():
-        for temp in Path(processing_folder).glob(f"{TEMP_AUDIO_PREFIX}*.wav"):
-            temp.unlink(missing_ok=True)
+        folder = Path(processing_folder)
+        for pattern in (f"{TEMP_AUDIO_PREFIX}*.wav", "analysis-*.wav", "render-*.ass"):
+            for temp in folder.glob(pattern):
+                temp.unlink(missing_ok=True)

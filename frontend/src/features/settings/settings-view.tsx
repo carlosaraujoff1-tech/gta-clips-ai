@@ -3,6 +3,7 @@
 import {
   AudioLines,
   BrainCircuit,
+  Clapperboard,
   Cpu,
   FolderPlus,
   HardDrive,
@@ -23,7 +24,6 @@ import {
   ErrorState,
   Field,
   PageHeader,
-  PhaseBadge,
   Skeleton,
   cx,
   inputClass,
@@ -41,6 +41,7 @@ import type {
 } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
+import { OllamaPanel } from "./ollama-panel";
 import { WhisperModels } from "./whisper-models";
 
 const STORAGE_FIELDS: Array<{ key: StorageKey; label: string; folder: string; hint: string }> = [
@@ -257,6 +258,7 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
         ffprobe_path: emptyToNull(form.tools.ffprobe_path ?? ""),
       },
       ai: { ...form.ai, ollama_base_url: form.ai.ollama_base_url.trim() },
+      render: { ...form.render, subtitle_font: form.render.subtitle_font.trim() },
     };
     try {
       const result = await api.put<UserSettings>("/settings", payload);
@@ -485,19 +487,15 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
         <WhisperModels selected={saved.ai.whisper_model} />
       </Card>
 
-      <Card title="Análise com IA (Ollama)" icon={BrainCircuit}>
-        <p className="mb-4 text-xs text-ink-muted">
-          Estas preferências já ficam salvas, mas só passam a ser usadas na Fase 4.
-        </p>
+      <Card title="Análise com IA (melhores momentos)" icon={BrainCircuit}>
+        <div className="mb-5">
+          <OllamaPanel />
+        </div>
         <div className="grid gap-5 md:grid-cols-2">
           <Field
             label="Endereço do Ollama"
             htmlFor="ollama-url"
-            hint={
-              <span className="inline-flex items-center gap-1.5">
-                Somente local <PhaseBadge phase={4} />
-              </span>
-            }
+            hint="Somente local (este computador)."
           >
             <input
               id="ollama-url"
@@ -510,11 +508,7 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
           <Field
             label="Modelo de análise"
             htmlFor="ollama-model"
-            hint={
-              <span className="inline-flex items-center gap-1.5">
-                Qwen3 4B quantizado <PhaseBadge phase={4} />
-              </span>
-            }
+            hint="qwen3:4b-instruct (Qwen3 4B quantizado, responde direto, ~2,5 GB)."
           >
             <input
               id="ollama-model"
@@ -525,6 +519,153 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
             />
           </Field>
         </div>
+        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <Field
+            label="Duração mínima (s)"
+            htmlFor="clip_min_seconds"
+            hint="Cortes mais curtos são estendidos."
+          >
+            <input
+              id="clip_min_seconds"
+              type="number"
+              min={5}
+              max={120}
+              className={inputClass}
+              value={form.ai.clip_min_seconds}
+              onChange={(e) => update("ai", { clip_min_seconds: Number(e.target.value) || 0 })}
+            />
+          </Field>
+          <Field
+            label="Duração máxima (s)"
+            htmlFor="clip_max_seconds"
+            hint="Shorts aceita até 60 s; TikTok mais."
+          >
+            <input
+              id="clip_max_seconds"
+              type="number"
+              min={10}
+              max={180}
+              className={inputClass}
+              value={form.ai.clip_max_seconds}
+              onChange={(e) => update("ai", { clip_max_seconds: Number(e.target.value) || 0 })}
+            />
+          </Field>
+          <Field
+            label="Cortes por live"
+            htmlFor="max_clips_per_recording"
+            hint="Máximo de sugestões por gravação."
+          >
+            <input
+              id="max_clips_per_recording"
+              type="number"
+              min={1}
+              max={50}
+              className={inputClass}
+              value={form.ai.max_clips_per_recording}
+              onChange={(e) =>
+                update("ai", { max_clips_per_recording: Number(e.target.value) || 0 })
+              }
+            />
+          </Field>
+          <Field
+            label="Nota mínima"
+            htmlFor="min_clip_score"
+            hint="Momentos abaixo disso são ignorados."
+          >
+            <input
+              id="min_clip_score"
+              type="number"
+              min={0}
+              max={100}
+              className={inputClass}
+              value={form.ai.min_clip_score}
+              onChange={(e) => update("ai", { min_clip_score: Number(e.target.value) || 0 })}
+            />
+          </Field>
+        </div>
+      </Card>
+
+      <Card title="Edição do vídeo (9:16)" icon={Clapperboard}>
+        <div className="grid gap-5 md:grid-cols-3">
+          <Field
+            label="Enquadramento"
+            htmlFor="layout"
+            hint="Fundo desfocado mostra mais do jogo; corte central preenche a tela."
+          >
+            <select
+              id="layout"
+              className={inputClass}
+              value={form.render.layout}
+              onChange={(e) =>
+                update("render", { layout: e.target.value as UserSettings["render"]["layout"] })
+              }
+            >
+              <option value="blur">Gameplay central + fundo desfocado</option>
+              <option value="crop">Corte central (tela cheia)</option>
+            </select>
+          </Field>
+          <Field label="Legendas" htmlFor="sub-style" hint="Karaokê destaca a palavra falada.">
+            <select
+              id="sub-style"
+              className={inputClass}
+              value={form.render.subtitle_style}
+              onChange={(e) =>
+                update("render", {
+                  subtitle_style: e.target.value as UserSettings["render"]["subtitle_style"],
+                })
+              }
+            >
+              <option value="karaoke">Karaokê (palavra em destaque)</option>
+              <option value="simple">Simples</option>
+            </select>
+          </Field>
+          <Field label="Fonte" htmlFor="sub-font" hint="Precisa estar instalada no Windows.">
+            <input
+              id="sub-font"
+              className={inputClass}
+              value={form.render.subtitle_font}
+              maxLength={60}
+              onChange={(e) => update("render", { subtitle_font: e.target.value })}
+            />
+          </Field>
+          <Field
+            label="Volume alvo (LUFS)"
+            htmlFor="target_lufs"
+            hint="-14 é o padrão de TikTok, Shorts e Reels."
+          >
+            <input
+              id="target_lufs"
+              type="number"
+              min={-24}
+              max={-9}
+              className={inputClass}
+              value={form.render.target_lufs}
+              onChange={(e) => update("render", { target_lufs: Number(e.target.value) || 0 })}
+            />
+          </Field>
+          <label className="flex items-center gap-3 self-center text-sm text-ink">
+            <input
+              type="checkbox"
+              className="size-4 accent-violet"
+              checked={form.render.show_title}
+              onChange={(e) => update("render", { show_title: e.target.checked })}
+            />
+            Mostrar título no topo
+          </label>
+          <label className="flex items-center gap-3 self-center text-sm text-ink">
+            <input
+              type="checkbox"
+              className="size-4 accent-violet"
+              checked={form.render.zoom}
+              onChange={(e) => update("render", { zoom: e.target.checked })}
+            />
+            Zoom lento (movimento)
+          </label>
+        </div>
+        <p className="mt-4 text-xs text-ink-faint">
+          A exportação usa a GPU AMD (AMF) quando disponível e a CPU (libx264) como alternativa
+          automática. Prévia da Fase 5.
+        </p>
       </Card>
 
       {/* ---------- Save bar ---------- */}

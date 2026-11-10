@@ -35,6 +35,12 @@ export function jobTitle(job: Job): string {
       return "Leitura de metadados";
     case "download_model":
       return `Download do modelo ${String(job.payload.model ?? "")}`;
+    case "pull_llm_model":
+      return `Download do modelo de IA ${String(job.payload.model ?? "")}`;
+    case "analyze_recording":
+      return `Análise${job.payload.mode === "heuristic" ? " rápida" : " com IA"}: ${String(job.payload.title ?? "")}`;
+    case "render_clip":
+      return `Edição do corte: ${String(job.payload.title ?? "")}`;
     case "transcribe_recording":
       return `Transcrição: ${String(job.payload.title ?? `gravação #${String(job.payload.recording_id)}`)}`;
   }

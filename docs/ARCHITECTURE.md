@@ -94,6 +94,31 @@ Job types (Phase 2): `scan_originals`, `import_file`, `probe_recording`. Duplica
 - Storage: `transcripts` (one per recording) and `transcript_segments` (text, timings,
   confidence and per-word timings as JSON). Exports (SRT/VTT/TXT) are generated on demand.
 
+### Highlights (Phase 4)
+
+- `services/highlights.py`: per-segment *signals* (keywords, exclamations, speech rate, audio
+  loudness vs the live's median using robust MAD statistics over audible seconds only), transcript
+  chunking (~11k chars, overlapping lines), the PT-BR system prompt, a JSON schema for Ollama
+  structured output (line numbers, not timestamps, to avoid hallucinated times), boundary
+  fitting (min/max duration), context extension (pull in the trigger, the setup question and
+  the reaction), padding that never crosses a neighbouring line, score blending (70% AI /
+  30% signals), overlap removal and top-N selection. `heuristic` mode works without Ollama.
+- `services/ollama.py`: loopback-only client; `think: false`, temperature 0.1, fixed seed
+  (reproducible results), reasoning traces stripped defensively, model pull with progress.
+- `services/whisper.py` additions: GTA RP `hotwords` and sentence splitting by word timings
+  (precise clip boundaries even when Whisper merges lines).
+- `jobs/analysis.py`: `analyze_recording` replaces previous *suggestions* only (clips already
+  rendered/reviewed are kept and never suggested again), `pull_llm_model`.
+
+### Vertical render (Phase 5 preview)
+
+- `services/subtitles.py`: ASS file, 1-3 word uppercase chunks, current word highlighted,
+  speech text sanitised (no ASS override injection), title box.
+- `services/render.py`: ffmpeg filter graph (blur/crop layouts, push-in zoom via
+  `scale eval=frame`, libass), loudnorm -14 LUFS, AMF → libx264 fallback, `+faststart`.
+- `render_clip` job → clip `pending_review`. `/clips/{id}/video` streams with Range support
+  and only serves files inside the configured clips folder.
+
 ## Frontend
 
 - Next.js App Router, TypeScript `strict`, Tailwind v4 design tokens in `src/app/globals.css`.

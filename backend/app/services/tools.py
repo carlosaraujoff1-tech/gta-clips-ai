@@ -9,7 +9,9 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from app.core.logging import get_logger
@@ -92,3 +94,53 @@ def start_tool(tool: ToolName, settings: ToolSettings, args: list[str]) -> subpr
     except OSError as exc:
         log.warning("tool_failed_to_start", tool=tool, error=str(exc))
         raise ToolNotFoundError(tool) from exc
+
+
+class FfmpegFailedError(Exception):
+    def __init__(self, returncode: int, stderr: str) -> None:
+        super().__init__(f"ffmpeg exited with {returncode}")
+        self.returncode = returncode
+        self.stderr = stderr
+
+
+def run_ffmpeg_with_progress(
+    tools: ToolSettings,
+    args: list[str],
+    duration_seconds: float | None,
+    on_progress: Callable[[float], None],
+    output: Path | None = None,
+) -> None:
+    """Runs ffmpeg with ``-progress pipe:1`` and reports a 0-1 fraction.
+
+    ``on_progress`` may raise (e.g. to cancel): ffmpeg is then killed and ``output``
+    (if given) removed. Raises ``FfmpegFailedError`` on a non-zero exit.
+    """
+    # The output path is always the last argument; progress flags go right before it.
+    *options, destination = args
+    full_args = [
+        "-nostdin", "-hide_banner", "-v", "error", "-y",
+        *options,
+        "-progress", "pipe:1", "-nostats",
+        destination,
+    ]  # fmt: skip
+    process = start_tool("ffmpeg", tools, full_args)
+    try:
+        assert process.stdout is not None
+        for line in process.stdout:
+            key, _, value = line.strip().partition("=")
+            if key == "out_time_us" and duration_seconds and value.isdigit():
+                on_progress(min(1.0, int(value) / 1_000_000 / duration_seconds))
+        stderr = process.stderr.read() if process.stderr else ""
+        returncode = process.wait()
+    except BaseException:
+        process.kill()
+        process.wait()
+        if output is not None:
+            output.unlink(missing_ok=True)
+        raise
+    if returncode != 0:
+        if output is not None:
+            output.unlink(missing_ok=True)
+        log.info("ffmpeg_failed", returncode=returncode, stderr=stderr[-800:])
+        raise FfmpegFailedError(returncode, stderr)
+    on_progress(1.0)

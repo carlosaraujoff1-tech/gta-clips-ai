@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.routes import (
+    clips,
     dashboard,
     health,
     jobs,
@@ -83,6 +84,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
         system,
         recordings,
         transcription,
+        clips,
         jobs,
         library,
     ):

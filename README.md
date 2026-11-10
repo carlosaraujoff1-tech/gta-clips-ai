@@ -13,8 +13,8 @@ Tudo roda no seu computador: sem APIs pagas, sem nuvem, funcionando offline depo
 | 1 | Fundação | ✅ Concluída (aguardando validação no PC Windows) |
 | 2 | Importação | ✅ Concluída (aguardando validação no PC Windows) |
 | 3 | Transcrição (Faster-Whisper) | ✅ Concluída (aguardando validação no PC Windows) |
-| 4 | Inteligência artificial (Ollama + Qwen3 4B) | ⏳ Aguardando autorização |
-| 5 | Edição automática (FFmpeg, 9:16, legendas) | — |
+| 4 | Inteligência artificial (Ollama + Qwen3 4B) | ✅ Concluída (aguardando validação no PC Windows) |
+| 5 | Edição automática (FFmpeg, 9:16, legendas) | 🟡 Prévia funcional (refinamento aguardando autorização) |
 | 6 | Aprovação | — |
 | 7 | Publicação | — |
 | 8 | Métricas | — |
@@ -125,6 +125,30 @@ Detalhes técnicos:
 - Os horários de cada palavra são guardados para as legendas sincronizadas da Fase 5.
 - O áudio temporário (WAV) vai para a pasta de processamento e é apagado ao final, mesmo se
   der erro ou for cancelado.
+
+## Melhores momentos e cortes (Fase 4 + prévia da Fase 5)
+
+1. Instale o **Ollama para Windows** e deixe-o aberto. Em **Configurações → Análise com IA**,
+   clique em **Baixar modelo** (`qwen3:4b-instruct`, ~2,5 GB, uma única vez).
+2. Em **Lives**, abra uma gravação transcrita e clique em **Encontrar melhores momentos**.
+   Sem Ollama, use **Análise rápida (sem IA)**.
+3. Em **Clips**, cada sugestão mostra nota, categoria e o motivo da escolha. **Gerar vídeo**
+   cria o corte pronto, que fica **Aguardando aprovação**.
+
+Como a nota é calculada: 70% avaliação da IA (gancho, história completa, emoção) + 30% emoção
+medida (volume do áudio acima da média da live, palavras como "corre", "perdeu", "kkkk",
+fala acelerada). O corte é ajustado para começar no gatilho da cena e terminar na reação,
+sem cortar palavras.
+
+Edição automática do corte:
+- 1080x1920 (9:16), gameplay central sobre fundo desfocado (ou corte central);
+- zoom lento, título no topo, legendas estilo karaokê sincronizadas palavra por palavra;
+- áudio com fade e normalizado em -14 LUFS (padrão TikTok/Shorts/Reels);
+- codificação pela GPU AMD (AMF) quando disponível, CPU (libx264) como alternativa.
+
+> Por que `qwen3:4b-instruct` e não `qwen3:4b`? No Ollama, `qwen3:4b` é a variante que
+> "pensa em voz alta" antes de responder, muito mais lenta. A Instruct é o mesmo Qwen3 4B
+> quantizado, respondendo direto.
 
 ## Princípios
 
