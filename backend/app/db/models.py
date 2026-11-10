@@ -197,6 +197,10 @@ class Clip(TimestampMixin, Base):
     output_path: Mapped[str | None] = mapped_column(String(1024))
     rendered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     render_error: Mapped[str | None] = mapped_column(Text)
+    # Per-clip edit overrides (validated by app.schemas.settings.ClipEdit).
+    edit: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    # What the last render did (encoder, final duration, removed pauses, ...).
+    render_info: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     status: Mapped[ClipStatus] = mapped_column(
         _enum(ClipStatus), default=ClipStatus.DRAFT, nullable=False, index=True
     )

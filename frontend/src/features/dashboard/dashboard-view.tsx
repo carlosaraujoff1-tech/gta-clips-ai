@@ -29,7 +29,7 @@ const PHASES = [
   { n: 7, name: "Publicação" },
   { n: 8, name: "Métricas" },
 ] as const;
-const CURRENT_PHASE = 4;
+const CURRENT_PHASE = 5;
 
 function StatCard({
   label,

@@ -102,18 +102,43 @@ def chunk_words(words: Sequence[Word]) -> list[list[Word]]:
     return chunks
 
 
+HIGHLIGHTS: dict[str, str] = {
+    "yellow": HIGHLIGHT,
+    "green": "&H0066F05A",  # #5AF066
+    "violet": "&H00FF8BB4",  # #B48BFF (lighter app violet: readable on dark footage)
+    "red": "&H004D4DFF",  # #FF4D4D
+}
+FONT_SIZES = {"m": 72, "l": 86, "xl": 102}
+SUB_MARGIN_V = {"lower": 430, "middle": 780}
+# Title vertical position per layout: above the gameplay window (blur), over the
+# footage (crop), just below the webcam band so it never covers the face (facecam),
+# and at the very top for sources that are already vertical (faces are usually there).
+TITLE_MARGIN_V = {"blur": 250, "crop": 230, "facecam": 668, "vertical": 70}
+
+
+@dataclass(frozen=True)
+class CaptionStyle:
+    font: str = "Arial Black"
+    style: SubtitleStyle = "karaoke"
+    highlight: str = "yellow"
+    size: str = "l"
+    position: str = "lower"
+    layout: str = "blur"
+    watermark: str = ""
+
+
 def _display(word: str) -> str:
     # Viral-style captions: uppercase, no commas/periods (keep ? and ! for emotion).
     return re.sub(r"[.,;:…]+", "", word).upper()
 
 
-def _chunk_text(chunk: Sequence[Word], active: int | None) -> str:
+def _chunk_text(chunk: Sequence[Word], active: int | None, highlight: str) -> str:
     parts = []
     for i, w in enumerate(chunk):
         text = _display(w.text)
         if i == active:
             parts.append(
-                f"{{\\c{HIGHLIGHT}\\fscx108\\fscy108}}{text}{{\\c{WHITE}\\fscx100\\fscy100}}"
+                f"{{\\c{highlight}\\fscx108\\fscy108}}{text}{{\\c{WHITE}\\fscx100\\fscy100}}"
             )
         else:
             parts.append(text)
@@ -124,11 +149,27 @@ def build_ass(
     words: Sequence[Word],
     duration: float,
     *,
-    font: str,
-    style: SubtitleStyle,
     title: str | None,
+    caption: CaptionStyle | None = None,
+    show_subtitles: bool = True,
 ) -> str:
-    safe_font = re.sub(r"[^A-Za-z0-9 ._-]", "", font) or "Arial"
+    c = caption or CaptionStyle()
+    safe_font = re.sub(r"[^A-Za-z0-9 ._-]", "", c.font) or "Arial"
+    size = FONT_SIZES.get(c.size, 86)
+    margin_v = SUB_MARGIN_V.get(c.position, 430)
+    highlight = HIGHLIGHTS.get(c.highlight, HIGHLIGHT)
+    if c.style == "boxed":
+        # Opaque dark box behind the words (BorderStyle 3) — readable on busy footage.
+        sub_style = (
+            f"Style: Sub,{safe_font},{size},{WHITE},{WHITE},&H30000000,&H30000000,"
+            f"-1,0,0,0,100,100,1,0,3,14,0,2,90,90,{margin_v},1"
+        )
+    else:
+        sub_style = (
+            f"Style: Sub,{safe_font},{size},{WHITE},{WHITE},{BLACK},&H80000000,"
+            f"-1,0,0,0,100,100,1,0,1,7,3,2,90,90,{margin_v},1"
+        )
+    title_v = TITLE_MARGIN_V.get(c.layout, 250)
     header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {WIDTH}
@@ -139,8 +180,9 @@ YCbCr Matrix: TV.709
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Sub,{safe_font},86,{WHITE},{WHITE},{BLACK},&H80000000,-1,0,0,0,100,100,1,0,1,7,3,2,90,90,430,1
-Style: Title,{safe_font},62,{WHITE},{WHITE},{TITLE_BOX},{TITLE_BOX},-1,0,0,0,100,100,0,0,3,18,0,8,110,110,250,1
+{sub_style}
+Style: Title,{safe_font},62,{WHITE},{WHITE},{TITLE_BOX},{TITLE_BOX},-1,0,0,0,100,100,0,0,3,18,0,8,110,110,{title_v},1
+Style: Mark,{safe_font},38,&H40FFFFFF,&H40FFFFFF,&H90000000,&H00000000,-1,0,0,0,100,100,1,0,1,3,0,2,90,90,{max(margin_v - 150, 150)},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -150,8 +192,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         events.append(
             f"Dialogue: 1,{_ts(0)},{_ts(duration)},Title,,0,0,0,,{{\\fad(250,0)}}{_clean(title)}"
         )
+    if c.watermark:
+        events.append(f"Dialogue: 1,{_ts(0)},{_ts(duration)},Mark,,0,0,0,,{_clean(c.watermark)}")
 
-    chunks = chunk_words(words)
+    chunks = chunk_words(words) if show_subtitles else []
     for n, chunk in enumerate(chunks):
         chunk_start = chunk[0].start
         # Keep each chunk on screen until the next one starts (no flicker between words).
@@ -159,18 +203,16 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         chunk_end = min(max(chunk[-1].end + 0.35, chunk[-1].end), next_start, duration)
         if chunk_end <= chunk_start:
             continue
-        if style == "karaoke":
+        if c.style in ("karaoke", "boxed"):
             for i, w in enumerate(chunk):
                 w_start = chunk_start if i == 0 else w.start
                 w_end = chunk[i + 1].start if i + 1 < len(chunk) else chunk_end
                 if w_end <= w_start:
                     continue
                 pop = "{\\fscx92\\fscy92\\t(0,90,\\fscx100\\fscy100)}" if i == 0 else ""
-                events.append(
-                    f"Dialogue: 0,{_ts(w_start)},{_ts(w_end)},Sub,,0,0,0,,{pop}{_chunk_text(chunk, i)}"
-                )
+                text = _chunk_text(chunk, i, highlight)
+                events.append(f"Dialogue: 0,{_ts(w_start)},{_ts(w_end)},Sub,,0,0,0,,{pop}{text}")
         else:
-            events.append(
-                f"Dialogue: 0,{_ts(chunk_start)},{_ts(chunk_end)},Sub,,0,0,0,,{_chunk_text(chunk, None)}"
-            )
+            text = _chunk_text(chunk, None, highlight)
+            events.append(f"Dialogue: 0,{_ts(chunk_start)},{_ts(chunk_end)},Sub,,0,0,0,,{text}")
     return header + "\n".join(events) + "\n"

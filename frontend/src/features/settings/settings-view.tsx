@@ -41,8 +41,11 @@ import type {
 } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
+import { FacecamPicker } from "./facecam-picker";
 import { OllamaPanel } from "./ollama-panel";
 import { WhisperModels } from "./whisper-models";
+
+type R = UserSettings["render"];
 
 const STORAGE_FIELDS: Array<{ key: StorageKey; label: string; folder: string; hint: string }> = [
   { key: "originals", label: "Originais", folder: "originals", hint: "Lives e gravações brutas." },
@@ -586,37 +589,105 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
       </Card>
 
       <Card title="Edição do vídeo (9:16)" icon={Clapperboard}>
-        <div className="grid gap-5 md:grid-cols-3">
+        <p className="mb-5 text-xs text-ink-muted">
+          Estilo padrão de todos os cortes. Cada corte pode ser ajustado no botão Editar, na página
+          Clips.
+        </p>
+
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-faint">
+          Enquadramento
+        </h3>
+        <div className="grid gap-5 lg:grid-cols-[18rem_1fr]">
           <Field
-            label="Enquadramento"
+            label="Layout padrão"
             htmlFor="layout"
-            hint="Fundo desfocado mostra mais do jogo; corte central preenche a tela."
+            hint="Câmera + jogo é o formato mais usado em cortes de live."
           >
             <select
               id="layout"
               className={inputClass}
               value={form.render.layout}
-              onChange={(e) =>
-                update("render", { layout: e.target.value as UserSettings["render"]["layout"] })
-              }
+              onChange={(e) => update("render", { layout: e.target.value as R["layout"] })}
             >
               <option value="blur">Gameplay central + fundo desfocado</option>
-              <option value="crop">Corte central (tela cheia)</option>
+              <option value="crop">Tela cheia (corte central)</option>
+              <option value="facecam">Câmera em cima + jogo embaixo</option>
             </select>
           </Field>
-          <Field label="Legendas" htmlFor="sub-style" hint="Karaokê destaca a palavra falada.">
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-ink-muted">
+              Posição da sua câmera na live{" "}
+              {form.render.facecam ? (
+                <span className="text-ok">· marcada</span>
+              ) : (
+                <span className="text-warn">· não marcada</span>
+              )}
+            </p>
+            <FacecamPicker
+              value={form.render.facecam}
+              onChange={(facecam) => update("render", { facecam })}
+            />
+          </div>
+        </div>
+
+        <h3 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-ink-faint">
+          Legendas
+        </h3>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          <Field label="Estilo" htmlFor="sub-style" hint="Caixa = fundo escuro atrás do texto.">
             <select
               id="sub-style"
               className={inputClass}
               value={form.render.subtitle_style}
               onChange={(e) =>
-                update("render", {
-                  subtitle_style: e.target.value as UserSettings["render"]["subtitle_style"],
-                })
+                update("render", { subtitle_style: e.target.value as R["subtitle_style"] })
               }
             >
               <option value="karaoke">Karaokê (palavra em destaque)</option>
+              <option value="boxed">Caixa + destaque</option>
               <option value="simple">Simples</option>
+            </select>
+          </Field>
+          <Field label="Cor do destaque" htmlFor="sub-color" hint="Cor da palavra falada.">
+            <select
+              id="sub-color"
+              className={inputClass}
+              value={form.render.subtitle_highlight}
+              onChange={(e) =>
+                update("render", { subtitle_highlight: e.target.value as R["subtitle_highlight"] })
+              }
+            >
+              <option value="yellow">Amarelo</option>
+              <option value="green">Verde</option>
+              <option value="violet">Roxo</option>
+              <option value="red">Vermelho</option>
+            </select>
+          </Field>
+          <Field label="Tamanho" htmlFor="sub-size" hint="Grande é o mais legível no celular.">
+            <select
+              id="sub-size"
+              className={inputClass}
+              value={form.render.subtitle_size}
+              onChange={(e) =>
+                update("render", { subtitle_size: e.target.value as R["subtitle_size"] })
+              }
+            >
+              <option value="m">Médio</option>
+              <option value="l">Grande</option>
+              <option value="xl">Extra grande</option>
+            </select>
+          </Field>
+          <Field label="Posição" htmlFor="sub-pos" hint="Inferior fica acima da interface do app.">
+            <select
+              id="sub-pos"
+              className={inputClass}
+              value={form.render.subtitle_position}
+              onChange={(e) =>
+                update("render", { subtitle_position: e.target.value as R["subtitle_position"] })
+              }
+            >
+              <option value="lower">Terço inferior</option>
+              <option value="middle">Meio da tela</option>
             </select>
           </Field>
           <Field label="Fonte" htmlFor="sub-font" hint="Precisa estar instalada no Windows.">
@@ -628,6 +699,66 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
               onChange={(e) => update("render", { subtitle_font: e.target.value })}
             />
           </Field>
+        </div>
+
+        <h3 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-ink-faint">
+          Áudio e acabamento
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-canvas/40 p-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-violet"
+              checked={form.render.jump_cuts}
+              onChange={(e) => update("render", { jump_cuts: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm text-ink">Cortar pausas</span>
+              <span className="block text-xs text-ink-faint">
+                Remove silêncios sem som do jogo.
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-canvas/40 p-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-violet"
+              checked={form.render.zoom}
+              onChange={(e) => update("render", { zoom: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm text-ink">Zoom e movimento</span>
+              <span className="block text-xs text-ink-faint">
+                Zoom lento ou alternado nos cortes.
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-canvas/40 p-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-violet"
+              checked={form.render.voice_boost}
+              onChange={(e) => update("render", { voice_boost: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm text-ink">Realçar voz</span>
+              <span className="block text-xs text-ink-faint">Filtro de graves e compressor.</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-canvas/40 p-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-violet"
+              checked={form.render.show_title}
+              onChange={(e) => update("render", { show_title: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm text-ink">Título no topo</span>
+              <span className="block text-xs text-ink-faint">Mostra o título do corte.</span>
+            </span>
+          </label>
+        </div>
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <Field
             label="Volume alvo (LUFS)"
             htmlFor="target_lufs"
@@ -640,31 +771,27 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
               max={-9}
               className={inputClass}
               value={form.render.target_lufs}
-              onChange={(e) => update("render", { target_lufs: Number(e.target.value) || 0 })}
+              onChange={(e) => update("render", { target_lufs: Number(e.target.value) || -14 })}
             />
           </Field>
-          <label className="flex items-center gap-3 self-center text-sm text-ink">
+          <Field
+            label="Marca d'água (opcional)"
+            htmlFor="watermark"
+            hint="Ex.: @seucanal. Aparece discreta abaixo das legendas."
+          >
             <input
-              type="checkbox"
-              className="size-4 accent-violet"
-              checked={form.render.show_title}
-              onChange={(e) => update("render", { show_title: e.target.checked })}
+              id="watermark"
+              className={inputClass}
+              value={form.render.watermark}
+              maxLength={40}
+              placeholder="@seucanal"
+              onChange={(e) => update("render", { watermark: e.target.value })}
             />
-            Mostrar título no topo
-          </label>
-          <label className="flex items-center gap-3 self-center text-sm text-ink">
-            <input
-              type="checkbox"
-              className="size-4 accent-violet"
-              checked={form.render.zoom}
-              onChange={(e) => update("render", { zoom: e.target.checked })}
-            />
-            Zoom lento (movimento)
-          </label>
+          </Field>
         </div>
         <p className="mt-4 text-xs text-ink-faint">
           A exportação usa a GPU AMD (AMF) quando disponível e a CPU (libx264) como alternativa
-          automática. Prévia da Fase 5.
+          automática. Lives já gravadas na vertical são usadas inteiras.
         </p>
       </Card>
 

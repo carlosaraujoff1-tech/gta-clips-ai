@@ -9,16 +9,19 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, Response, status
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import ColumnElement, func, select
 
 from app.api.deps import DbSession, PageParams
 from app.core.errors import AppError
 from app.db.models import Clip, ClipStatus, JobType, Recording, RecordingStatus
+from app.jobs.render import effective_edit, render_inputs
 from app.schemas.jobs import JobOut
 from app.schemas.library import ClipOut, Page
+from app.schemas.settings import ClipEdit, RenderSettings
 from app.services import jobs as job_service
 from app.services import ollama
+from app.services.tools import ToolNotFoundError, ToolTimeoutError, run_tool_bytes
 from app.services.user_settings import load_user_settings
 
 router = APIRouter(tags=["clips"])
@@ -27,10 +30,19 @@ router = APIRouter(tags=["clips"])
 # ------------------------------------------------------------------ helpers
 
 
-def to_out(clip: Clip) -> ClipOut:
+def to_out(clip: Clip, defaults: RenderSettings | None = None) -> ClipOut:
     out = ClipOut.model_validate(clip)
     out.recording_title = clip.recording.title
+    out.recording_duration = clip.recording.duration_seconds
     out.has_video = bool(clip.output_path) and os.path.isfile(clip.output_path or "")
+    thumb = (clip.render_info or {}).get("thumbnail")
+    out.has_thumbnail = out.has_video and isinstance(thumb, str) and os.path.isfile(thumb)
+    inputs = (clip.render_info or {}).get("inputs")
+    if out.has_video and isinstance(inputs, dict) and defaults is not None:
+        current = render_inputs(
+            clip.start_seconds, clip.end_seconds, clip.title, effective_edit(clip.edit, defaults)
+        )
+        out.render_outdated = current != inputs
     return out
 
 
@@ -183,12 +195,122 @@ def list_clips(
     }
     order = orders[sort]
     rows = db.scalars(query.order_by(*order).limit(page.limit).offset(page.offset)).all()
-    return Page(items=[to_out(c) for c in rows], total=total, limit=page.limit, offset=page.offset)
+    defaults = load_user_settings(db).render
+    return Page(
+        items=[to_out(c, defaults) for c in rows],
+        total=total,
+        limit=page.limit,
+        offset=page.offset,
+    )
 
 
 @router.get("/clips/{clip_id}", response_model=ClipOut)
 def read_clip(clip_id: int, db: DbSession) -> ClipOut:
-    return to_out(_get_clip(db, clip_id))
+    return to_out(_get_clip(db, clip_id), load_user_settings(db).render)
+
+
+class ClipUpdate(BaseModel):
+    """Editable fields of a clip (omitted fields are unchanged)."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    start_seconds: float | None = Field(default=None, ge=0)
+    end_seconds: float | None = Field(default=None, gt=0)
+    edit: ClipEdit | None = None
+
+
+MIN_CLIP_S, MAX_CLIP_S = 3.0, 180.0
+
+
+@router.patch("/clips/{clip_id}", response_model=ClipOut)
+def update_clip(clip_id: int, payload: ClipUpdate, db: DbSession) -> ClipOut:
+    clip = _get_clip(db, clip_id)
+    if clip.status in (ClipStatus.APPROVED, ClipStatus.RENDERING):
+        raise AppError(
+            "clip_locked",
+            "Este corte já foi aprovado ou está sendo renderizado e não pode ser editado.",
+            status.HTTP_409_CONFLICT,
+        )
+    changes = payload.model_dump(exclude_unset=True)
+    start = payload.start_seconds if "start_seconds" in changes else clip.start_seconds
+    end = payload.end_seconds if "end_seconds" in changes else clip.end_seconds
+    if start is None or end is None:
+        raise AppError("validation_error", "Informe o início e o fim do corte.")
+    limit = clip.recording.duration_seconds
+    if limit is not None and end > limit + 0.01:
+        raise AppError(
+            "validation_error", "O fim do corte passa da duração da gravação.",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )  # fmt: skip
+    if not MIN_CLIP_S <= end - start <= MAX_CLIP_S:
+        raise AppError(
+            "validation_error",
+            f"O corte deve ter entre {MIN_CLIP_S:.0f} e {MAX_CLIP_S:.0f} segundos.",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )
+    if "title" in changes:
+        if payload.title is None:
+            raise AppError("validation_error", "O título não pode ficar vazio.")
+        clip.title = payload.title
+    clip.start_seconds, clip.end_seconds = round(start, 2), round(end, 2)
+    if "edit" in changes:
+        clip.edit = payload.edit.model_dump() if payload.edit else None
+    db.commit()
+    return to_out(clip, load_user_settings(db).render)
+
+
+@router.get("/clips/{clip_id}/thumbnail")
+def clip_thumbnail(clip_id: int, db: DbSession) -> FileResponse:
+    clip = _get_clip(db, clip_id)
+    clips_folder = load_user_settings(db).storage.clips
+    thumb = (clip.render_info or {}).get("thumbnail")
+    if not isinstance(thumb, str) or not clips_folder:
+        raise AppError("thumbnail_missing", "Miniatura indisponível.", status.HTTP_404_NOT_FOUND)
+    path = Path(thumb).resolve()
+    if Path(clips_folder).resolve() not in path.parents or not path.is_file():
+        raise AppError("thumbnail_missing", "Miniatura indisponível.", status.HTTP_404_NOT_FOUND)
+    return FileResponse(path, media_type="image/jpeg")
+
+
+@router.get("/recordings/{recording_id}/frame")
+def recording_frame(
+    recording_id: int,
+    db: DbSession,
+    t: Annotated[float, Query(ge=0)] = 0.0,
+    width: Annotated[int, Query(ge=160, le=1920)] = 960,
+) -> Response:
+    """A JPEG frame of the recording (used by the clip editor and the webcam picker)."""
+    recording = db.get(Recording, recording_id)
+    if recording is None:
+        raise AppError("recording_not_found", "Gravação não encontrada.", status.HTTP_404_NOT_FOUND)
+    source = Path(recording.file_path)
+    if not source.is_file():
+        raise AppError(
+            "file_missing", "Arquivo da gravação não encontrado.", status.HTTP_404_NOT_FOUND
+        )
+    if recording.duration_seconds is not None:
+        t = min(t, max(recording.duration_seconds - 0.1, 0.0))
+    try:
+        image = run_tool_bytes(
+            "ffmpeg",
+            load_user_settings(db).tools,
+            ["-v", "error", "-ss", f"{t:.3f}", "-i", str(source), "-frames:v", "1",
+             "-vf", f"scale={width}:-2", "-q:v", "4",
+             "-f", "image2pipe", "-c:v", "mjpeg", "pipe:1"],
+            timeout=20,
+        )  # fmt: skip
+    except (ToolNotFoundError, ToolTimeoutError) as exc:
+        raise AppError(
+            "frame_failed", "Não foi possível ler o quadro do vídeo.", status.HTTP_502_BAD_GATEWAY
+        ) from exc
+    if image is None:
+        raise AppError(
+            "frame_failed", "Não foi possível ler o quadro do vídeo.", status.HTTP_502_BAD_GATEWAY
+        )
+    return Response(
+        content=image, media_type="image/jpeg", headers={"Cache-Control": "max-age=3600"}
+    )
 
 
 @router.delete("/clips/{clip_id}", status_code=status.HTTP_204_NO_CONTENT)

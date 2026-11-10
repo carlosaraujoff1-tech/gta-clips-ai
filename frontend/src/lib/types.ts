@@ -94,8 +94,13 @@ export interface Clip {
   rendered_at: string | null;
   render_error: string | null;
   created_at: string;
+  edit: ClipEdit | null;
+  render_info: RenderInfo | null;
   recording_title: string;
+  recording_duration: number | null;
   has_video: boolean;
+  has_thumbnail: boolean;
+  render_outdated: boolean;
 }
 
 export interface Publication {
@@ -146,13 +151,45 @@ export interface UserSettings {
   render: RenderSettings;
 }
 
+export type VerticalLayout = "blur" | "crop" | "facecam";
+
+export interface Region {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface RenderSettings {
-  layout: "blur" | "crop";
-  subtitle_style: "karaoke" | "simple";
+  layout: VerticalLayout;
+  facecam: Region | null;
+  subtitle_style: "karaoke" | "simple" | "boxed";
+  subtitle_highlight: "yellow" | "green" | "violet" | "red";
+  subtitle_size: "m" | "l" | "xl";
+  subtitle_position: "lower" | "middle";
   subtitle_font: string;
   show_title: boolean;
   zoom: boolean;
+  jump_cuts: boolean;
+  voice_boost: boolean;
   target_lufs: number;
+  watermark: string;
+}
+
+export interface ClipEdit {
+  layout: VerticalLayout | null;
+  focus_x: number;
+  zoom: boolean | null;
+  subtitles: boolean;
+  jump_cuts: boolean | null;
+}
+
+export interface RenderInfo {
+  encoder: string;
+  layout: string;
+  duration: number;
+  removed_seconds: number;
+  cuts: number;
 }
 
 export interface AnalysisStatus {

@@ -264,6 +264,11 @@ def recover_after_restart(session: Session, processing_folder: str | None) -> No
         log.warning("status_recovered", recordings=len(stuck), clips=len(rendering))
     if processing_folder and Path(processing_folder).is_dir():
         folder = Path(processing_folder)
-        for pattern in (f"{TEMP_AUDIO_PREFIX}*.wav", "analysis-*.wav", "render-*.ass"):
+        for pattern in (
+            f"{TEMP_AUDIO_PREFIX}*.wav",
+            "analysis-*.wav",
+            "render-*.ass",
+            "render-*.wav",
+        ):
             for temp in folder.glob(pattern):
                 temp.unlink(missing_ok=True)

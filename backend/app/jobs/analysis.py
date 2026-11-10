@@ -1,9 +1,8 @@
-"""Phase 4 jobs (highlight analysis, LLM model pull) and the Phase 5 preview render job."""
+"""Phase 4 jobs: highlight analysis and LLM model pull."""
 
 from __future__ import annotations
 
 import time
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,8 +19,6 @@ from app.db.models import (
 from app.jobs.runner import JobContext, JobFailedError
 from app.services import highlights, ollama
 from app.services.audio import AudioExtractionError, extract_audio
-from app.services.render import RenderError, RenderJob, render, slugify
-from app.services.subtitles import build_ass, words_for_range
 
 log = get_logger(__name__)
 
@@ -228,100 +225,3 @@ def analyze_recording(ctx: JobContext) -> dict[str, Any]:
         "clips": found,
         "seconds": seconds,
     }
-
-
-# ---------------------------------------------------------------- render
-
-
-def render_clip(ctx: JobContext) -> dict[str, Any]:
-    clip_id = int(ctx.payload.get("clip_id", 0))
-    processing = _require_folder(ctx.settings.storage.processing, "processamento")
-    clips_folder = _require_folder(ctx.settings.storage.clips, "cortes")
-
-    with ctx.session() as session:
-        clip = session.get(Clip, clip_id)
-        if clip is None:
-            raise JobFailedError("Corte não encontrado.")
-        recording = clip.recording
-        source = Path(recording.file_path)
-        if not source.is_file():
-            raise JobFailedError("Arquivo da gravação não encontrado. O HD está conectado?")
-        segments: list[tuple[float, float, str, list[list[object]] | None]] = []
-        if recording.transcript is not None:
-            rows = session.scalars(
-                select(TranscriptSegment)
-                .where(
-                    TranscriptSegment.transcript_id == recording.transcript.id,
-                    TranscriptSegment.end_seconds > clip.start_seconds,
-                    TranscriptSegment.start_seconds < clip.end_seconds,
-                )
-                .order_by(TranscriptSegment.position)
-            ).all()
-            segments = [(r.start_seconds, r.end_seconds, r.text, r.words) for r in rows]
-        start, end = clip.start_seconds, clip.end_seconds
-        title = clip.title
-        old_output = Path(clip.output_path) if clip.output_path else None
-        job = RenderJob(
-            source=source,
-            start=start,
-            end=end,
-            source_fps=recording.fps,
-            has_audio=bool(recording.audio_tracks),
-            subtitles_file=processing / f"render-{clip_id}-{ctx.job_id}.ass",
-            output=clips_folder / f"{clip_id:05d}-{slugify(title)}.mp4",
-        )
-        previous_status = clip.status
-        clip.status = ClipStatus.RENDERING
-        clip.render_error = None
-        session.commit()
-
-    settings = ctx.settings.render
-    try:
-        words = words_for_range(segments, start, end)
-        job.subtitles_file.write_text(
-            build_ass(
-                words,
-                end - start,
-                font=settings.subtitle_font,
-                style=settings.subtitle_style,
-                title=title if settings.show_title else None,
-            ),
-            encoding="utf-8",
-        )
-
-        def on_progress(fraction: float) -> None:
-            ctx.check_cancelled()
-            ctx.progress(fraction * 0.98, f"Renderizando corte vertical ({round(fraction * 100)}%)")
-
-        ctx.progress(0.0, "Preparando edição (9:16, legendas, áudio)…", force=True)
-        try:
-            encoder = render(job, settings, ctx.settings.tools, on_progress)
-        except RenderError as exc:
-            raise JobFailedError(str(exc)) from exc
-
-        with ctx.session() as session:
-            clip = session.get(Clip, clip_id)
-            if clip is None:
-                job.output.unlink(missing_ok=True)
-                raise JobFailedError("O corte foi removido durante a renderização.")
-            if old_output and old_output != job.output:
-                old_output.unlink(missing_ok=True)
-            clip.output_path = str(job.output)
-            clip.rendered_at = datetime.now(UTC)
-            clip.status = ClipStatus.PENDING_REVIEW  # nothing is published without approval
-            session.commit()
-    except BaseException as exc:
-        with ctx.session() as session:
-            clip = session.get(Clip, clip_id)
-            if clip is not None:
-                clip.status = previous_status
-                if isinstance(exc, JobFailedError):
-                    clip.render_error = str(exc)
-                session.commit()
-        raise
-    finally:
-        job.subtitles_file.unlink(missing_ok=True)
-
-    size = job.output.stat().st_size
-    ctx.progress(1.0, "Corte pronto para revisão.", force=True)
-    return {"clip_id": clip_id, "output": str(job.output), "bytes": size, "encoder": encoder}

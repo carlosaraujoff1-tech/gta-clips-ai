@@ -110,14 +110,30 @@ Job types (Phase 2): `scan_originals`, `import_file`, `probe_recording`. Duplica
 - `jobs/analysis.py`: `analyze_recording` replaces previous *suggestions* only (clips already
   rendered/reviewed are kept and never suggested again), `pull_llm_model`.
 
-### Vertical render (Phase 5 preview)
+### Vertical render (Phase 5)
 
-- `services/subtitles.py`: ASS file, 1-3 word uppercase chunks, current word highlighted,
-  speech text sanitised (no ASS override injection), title box.
-- `services/render.py`: ffmpeg filter graph (blur/crop layouts, push-in zoom via
-  `scale eval=frame`, libass), loudnorm -14 LUFS, AMF → libx264 fallback, `+faststart`.
-- `render_clip` job → clip `pending_review`. `/clips/{id}/video` streams with Range support
-  and only serves files inside the configured clips folder.
+- `services/render.py`: one ffmpeg filter graph per clip. Framing always *scales to cover*
+  the target box then crops at `focus_x` (robust to any source size/rounding). Layouts:
+  `blur`, `crop`, `facecam` (webcam region → 1080x640 band + gameplay 1080x1280 + accent
+  line); portrait sources are kept whole. Jump cuts = `trim`/`atrim` pieces + `concat`,
+  every other piece punched-in 8 %, 12-15 ms audio fades at each cut. Voice boost
+  (`highpass` + `acompressor`) before `loudnorm`. AMF → libx264 fallback; JPEG thumbnail.
+- `services/jumpcuts.py`: keep-intervals from word timings **and** 100 ms loudness: only
+  quiet runs (≥ 0.4 s, 12 dB below the speech level) between phrases are removed; the tail
+  after the last word is kept. Word timings are remapped to the cut timeline.
+- `services/subtitles.py`: ASS presets (karaoke / boxed / simple), highlight colour, size,
+  position, layout-aware title placement, watermark; speech text sanitised.
+- `jobs/render.py`: merges per-clip `edit` (ClipEdit) over `RenderSettings`; stores
+  `render_info` (encoder, duration, cuts, inputs) so the API can flag clips edited after
+  rendering (`render_outdated`).
+- API: `PATCH /clips/{id}` (title, start/end, edit; validated), `GET /recordings/{id}/frame`
+  (JPEG for the editor and webcam picker), `GET /clips/{id}/thumbnail`.
+
+### Transcription safeguards
+
+Vocabulary hints are a plain word list (phrased as sentences, Whisper sometimes copied them
+into silent/music parts). `is_hallucination` drops repetitive filler when `no_speech_prob`
+is high and any segment made mostly of hint words; segments are also split at long pauses.
 
 ## Frontend
 

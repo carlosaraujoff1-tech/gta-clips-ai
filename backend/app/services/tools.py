@@ -144,3 +144,25 @@ def run_ffmpeg_with_progress(
         log.info("ffmpeg_failed", returncode=returncode, stderr=stderr[-800:])
         raise FfmpegFailedError(returncode, stderr)
     on_progress(1.0)
+
+
+def run_tool_bytes(
+    tool: ToolName, settings: ToolSettings, args: list[str], timeout: float
+) -> bytes | None:
+    """Like ``run_tool`` but returns raw stdout bytes (e.g. an image piped by ffmpeg)."""
+    executable = resolve_tool(tool, settings)
+    if executable is None:
+        raise ToolNotFoundError(tool)
+    try:
+        completed = subprocess.run(  # noqa: S603 - allow-listed executable, list args, no shell
+            [executable, *args],
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+            creationflags=_NO_WINDOW,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ToolTimeoutError(tool) from exc
+    except OSError as exc:
+        raise ToolNotFoundError(tool) from exc
+    return completed.stdout if completed.returncode == 0 and completed.stdout else None

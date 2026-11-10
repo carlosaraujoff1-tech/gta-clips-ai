@@ -211,3 +211,26 @@ def test_real_whisper(tmp_path: Path) -> None:
     text = " ".join(s.text for s in segments).lower()
     assert info.language == "pt"
     assert "polícia" in text or "policia" in text
+
+
+def test_hallucination_guards() -> None:
+    seg = whisper.SegmentData
+    # Repetitive filler over music, when the model doubts there is speech.
+    assert whisper.is_hallucination(seg(0, 1, "oi oi oi", None, 0.71))
+    # The vocabulary hints leaking into the transcript.
+    assert whisper.is_hallucination(seg(0, 1, "Viatura, polícia, reboque e helicóptero", None, 0.1))
+    # Real speech that happens to contain hint words is kept.
+    assert not whisper.is_hallucination(seg(0, 1, "Tu é polícia, eu sou reboque", None, 0.6))
+    assert not whisper.is_hallucination(seg(0, 1, "Oi", None, 0.1))
+
+
+def test_split_at_long_pause_and_capitalize() -> None:
+    words: list[list[Any]] = [
+        [0, 0.4, " falou", 1],
+        [0.5, 0.9, " falou", 1],
+        [2.0, 2.4, " chega", 1],  # 1.1 s pause before this word
+        [2.5, 3, " rapaz", 1],
+    ]
+    s = whisper.SegmentData(0, 5, "falou falou chega rapaz", None, None, words)
+    parts = whisper.split_sentences(s)
+    assert [p.text for p in parts] == ["Falou falou", "Chega rapaz"]

@@ -83,9 +83,14 @@ class ClipOut(BaseModel):
     rendered_at: datetime | None
     render_error: str | None
     created_at: datetime
+    edit: dict[str, Any] | None
+    render_info: dict[str, Any] | None
     # Computed at read time.
     recording_title: str = ""
+    recording_duration: float | None = None
     has_video: bool = False
+    has_thumbnail: bool = False
+    render_outdated: bool = False  # edited after the video was generated
 
 
 class PublicationOut(BaseModel):

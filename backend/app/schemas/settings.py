@@ -140,19 +140,44 @@ class AISettings(_Strict):
         return value
 
 
-SubtitleStyle = Literal["karaoke", "simple"]
-VerticalLayout = Literal["blur", "crop"]
+SubtitleStyle = Literal["karaoke", "simple", "boxed"]
+SubtitleSize = Literal["m", "l", "xl"]
+SubtitlePosition = Literal["lower", "middle"]
+HighlightColor = Literal["yellow", "green", "violet", "red"]
+VerticalLayout = Literal["blur", "crop", "facecam"]
+
+
+class Region(_Strict):
+    """Rectangle in normalised coordinates (0-1) of the source video frame."""
+
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    w: float = Field(gt=0.02, le=1)
+    h: float = Field(gt=0.02, le=1)
+
+    @model_validator(mode="after")
+    def _inside_frame(self) -> Region:
+        if self.x + self.w > 1.0001 or self.y + self.h > 1.0001:
+            raise ValueError("A região precisa ficar dentro do quadro do vídeo.")
+        return self
 
 
 class RenderSettings(_Strict):
-    """Vertical (9:16) export settings. Phase 5 preview: refined in Phase 5."""
+    """Default edit applied to every vertical (9:16) clip. Each clip can override it."""
 
-    layout: VerticalLayout = "blur"  # blur = gameplay centered over a blurred copy
+    layout: VerticalLayout = "blur"  # blur = gameplay centred over a blurred copy
+    facecam: Region | None = None  # where the webcam sits in the live (for "facecam")
     subtitle_style: SubtitleStyle = "karaoke"  # karaoke = current word highlighted
+    subtitle_highlight: HighlightColor = "yellow"
+    subtitle_size: SubtitleSize = "l"
+    subtitle_position: SubtitlePosition = "lower"
     subtitle_font: str = Field(default="Arial Black", min_length=1, max_length=60)
     show_title: bool = True
-    zoom: bool = True  # slow push-in for movement
+    zoom: bool = True  # slow push-in, or alternating punch-ins when jump cuts are on
+    jump_cuts: bool = True  # remove pauses with no speech *and* no game sound
+    voice_boost: bool = True  # high-pass + gentle compression before loudness normalisation
     target_lufs: float = Field(default=-14.0, ge=-24.0, le=-9.0)  # TikTok/Shorts/Reels level
+    watermark: str = Field(default="", max_length=40)  # e.g. "@seucanal"
 
     @field_validator("subtitle_font")
     @classmethod
@@ -160,6 +185,24 @@ class RenderSettings(_Strict):
         if not re.fullmatch(r"[A-Za-z0-9 ._-]+", value):
             raise ValueError("Nome de fonte inválido.")
         return value
+
+    @field_validator("watermark")
+    @classmethod
+    def _watermark(cls, value: str) -> str:
+        value = value.strip()
+        if value and not re.fullmatch(r"[\w@#.\- ]+", value):
+            raise ValueError("A marca d'água aceita letras, números, @, #, ponto e hífen.")
+        return value
+
+
+class ClipEdit(_Strict):
+    """Per-clip overrides of the default edit (``None`` = use the default)."""
+
+    layout: VerticalLayout | None = None
+    focus_x: float = Field(default=0.5, ge=0, le=1)  # horizontal centre of the framing
+    zoom: bool | None = None
+    subtitles: bool = True
+    jump_cuts: bool | None = None
 
 
 class UserSettings(_Strict):

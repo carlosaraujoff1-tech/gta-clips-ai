@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.services import highlights as h
 from app.services import ollama, whisper
-from app.services.subtitles import Word, build_ass, chunk_words, words_for_range
+from app.services.subtitles import CaptionStyle, Word, build_ass, chunk_words, words_for_range
 from tests.conftest import CLIENT_HEADERS
 from tests.test_imports import (
     configure_storage,
@@ -203,7 +203,7 @@ def test_ass_karaoke_and_injection_safety() -> None:
         10.0, 12.0,
     )  # fmt: skip
     assert words[0].start == 0.0
-    ass = build_ass(words, 2.0, font="Arial Black", style="karaoke", title="Fuga {\\pos}")
+    ass = build_ass(words, 2.0, title="Fuga {\\pos}", caption=CaptionStyle(font="Arial Black"))
     assert "Style: Sub,Arial Black" in ass
     assert "POLÍCIA" in ass and "{\\b1}" not in ass  # speech can't inject ASS tags
     assert "Fuga pos" in ass  # title braces/backslashes removed

@@ -14,6 +14,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import os
+import re
 import shutil
 import threading
 import time
@@ -177,10 +178,14 @@ class TranscriptionInfo:
 
 
 # Words common in Brazilian GTA RP lives that a generic model tends to mishear.
+# Words common in Brazilian GTA RP lives that a generic model tends to mishear. Kept
+# as a plain list: phrased as sentences, Whisper sometimes "hallucinates" the whole
+# phrase over music or silence (see ``is_hallucination``).
 GTA_RP_HOTWORDS = (
-    "Live de GTA RP. A polícia veio de viatura atrás do carro! Fugimos pro morro e pro beco. "
-    "O mecânico, a fiança, a delegacia, o assalto e o helicóptero."
+    "GTA RP, viatura, polícia, reboque, guincho, morro, mecânico, fiança, delegacia, "
+    "assalto, perseguição, helicóptero"
 )
+_HOTWORD_SET = {w.strip().lower() for w in re.split(r"[,\s]+", GTA_RP_HOTWORDS) if w.strip()}
 
 _model_lock = threading.Lock()
 _loaded: tuple[str, int, FWModel] | None = None
@@ -211,6 +216,29 @@ def _load_model(models_root: Path, name: WhisperModel, threads: int) -> FWModel:
 
 SENTENCE_END = (".", "?", "!", "…")
 MIN_SENTENCE_WORDS = 2
+PAUSE_SPLIT_S = 0.8  # a long pause inside a segment usually starts a new line
+
+
+def is_hallucination(seg: SegmentData) -> bool:
+    """Known Whisper failure modes on music/noise: drop rather than caption them.
+
+    - repetitive filler ("oi oi oi", "obrigado") where the model itself doubts there
+      is speech (no_speech_prob);
+    - text made mostly of the vocabulary hints (prompt leaking into the transcript).
+    """
+    words = [w.lower() for w in re.findall(r"[\wÀ-ÿ]+", seg.text)]
+    if not words:
+        return True
+    unique = set(words)
+    doubt = (seg.no_speech_prob or 0.0) > 0.5
+    if doubt and len(unique) <= 2 and len(words) <= 4:
+        return True
+    hint_share = sum(w in _HOTWORD_SET for w in words) / len(words)
+    return len(words) >= 3 and hint_share >= 0.6
+
+
+def _capitalize(text: str) -> str:
+    return text[:1].upper() + text[1:] if text else text
 
 
 def split_sentences(seg: SegmentData) -> list[SegmentData]:
@@ -226,8 +254,9 @@ def split_sentences(seg: SegmentData) -> list[SegmentData]:
         groups[-1].append(word)
         token = str(word[2]).strip()
         remaining = len(seg.words) - i - 1
+        next_gap = (float(seg.words[i + 1][0]) - float(word[1])) if remaining else 0.0
         if (
-            token.endswith(SENTENCE_END)
+            (token.endswith(SENTENCE_END) or next_gap > PAUSE_SPLIT_S)
             and len(groups[-1]) >= MIN_SENTENCE_WORDS
             and remaining >= MIN_SENTENCE_WORDS
         ):
@@ -238,7 +267,7 @@ def split_sentences(seg: SegmentData) -> list[SegmentData]:
         SegmentData(
             start=float(g[0][0]),
             end=float(g[-1][1]),
-            text="".join(str(w[2]) for w in g).strip(),
+            text=_capitalize("".join(str(w[2]) for w in g).strip()),
             avg_logprob=seg.avg_logprob,
             no_speech_prob=seg.no_speech_prob,
             words=g,
@@ -283,7 +312,7 @@ def transcribe(
                 [round(w.start, 3), round(w.end, 3), w.word, round(w.probability, 3)]
                 for w in (seg.words or [])
             ]
-            yield from split_sentences(
+            for part in split_sentences(
                 SegmentData(
                     start=round(seg.start, 3),
                     end=round(seg.end, 3),
@@ -292,7 +321,12 @@ def transcribe(
                     no_speech_prob=seg.no_speech_prob,
                     words=words,
                 )
-            )
+            ):
+                if is_hallucination(part):
+                    log.info("segment_dropped_as_hallucination", start=part.start)
+                    continue
+                part.text = _capitalize(part.text)
+                yield part
 
     return (
         TranscriptionInfo(

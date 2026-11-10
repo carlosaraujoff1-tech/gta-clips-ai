@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from app.core.config import Settings
 from app.db.models import JobType
-from app.jobs.analysis import analyze_recording, pull_llm_model, render_clip
+from app.jobs.analysis import analyze_recording, pull_llm_model
 from app.jobs.handlers import import_file, probe_recording, scan_originals
+from app.jobs.render import render_clip
 from app.jobs.runner import Handler
 from app.jobs.transcription import make_download_model, make_transcribe_recording
 

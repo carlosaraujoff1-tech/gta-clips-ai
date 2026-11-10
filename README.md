@@ -14,8 +14,8 @@ Tudo roda no seu computador: sem APIs pagas, sem nuvem, funcionando offline depo
 | 2 | Importação | ✅ Concluída (aguardando validação no PC Windows) |
 | 3 | Transcrição (Faster-Whisper) | ✅ Concluída (aguardando validação no PC Windows) |
 | 4 | Inteligência artificial (Ollama + Qwen3 4B) | ✅ Concluída (aguardando validação no PC Windows) |
-| 5 | Edição automática (FFmpeg, 9:16, legendas) | 🟡 Prévia funcional (refinamento aguardando autorização) |
-| 6 | Aprovação | — |
+| 5 | Edição automática (FFmpeg, 9:16, legendas) | ✅ Concluída (aguardando validação no PC Windows) |
+| 6 | Aprovação | ⏳ Aguardando autorização |
 | 7 | Publicação | — |
 | 8 | Métricas | — |
 
@@ -140,11 +140,22 @@ medida (volume do áudio acima da média da live, palavras como "corre", "perdeu
 fala acelerada). O corte é ajustado para começar no gatilho da cena e terminar na reação,
 sem cortar palavras.
 
-Edição automática do corte:
-- 1080x1920 (9:16), gameplay central sobre fundo desfocado (ou corte central);
-- zoom lento, título no topo, legendas estilo karaokê sincronizadas palavra por palavra;
-- áudio com fade e normalizado em -14 LUFS (padrão TikTok/Shorts/Reels);
-- codificação pela GPU AMD (AMF) quando disponível, CPU (libx264) como alternativa.
+## Edição dos cortes (Fase 5)
+
+Estilo padrão em **Configurações → Edição do vídeo**; ajuste fino de cada corte no botão
+**Editar** da página Clips (prévia do quadro com a área que aparece no vídeo).
+
+- **Layouts (1080x1920):** gameplay central + fundo desfocado, tela cheia (corte 9:16) ou
+  **câmera em cima + jogo embaixo** — marque a posição da sua câmera arrastando um retângulo
+  sobre um quadro da live. Lives já verticais são usadas inteiras.
+- **Foco horizontal** por corte, título editável, início/fim com ajuste de ±0,5 s.
+- **Cortes nas pausas (jump cuts):** remove silêncios só quando também não há som do jogo
+  (tiros, sirenes e risadas nunca são cortados); zoom alternado entre os trechos.
+- **Legendas:** karaokê, caixa ou simples; cor do destaque, tamanho, posição e fonte.
+- **Áudio:** realce de voz (filtro de graves + compressor), fades e -14 LUFS.
+- Título no topo, marca d'água opcional (@seucanal), miniatura de cada corte.
+- Codificação pela GPU AMD (AMF) quando disponível, CPU (libx264) como alternativa.
+- Editar um corte já gerado mostra o aviso "a edição mudou" até gerar o vídeo de novo.
 
 > Por que `qwen3:4b-instruct` e não `qwen3:4b`? No Ollama, `qwen3:4b` é a variante que
 > "pensa em voz alta" antes de responder, muito mais lenta. A Instruct é o mesmo Qwen3 4B

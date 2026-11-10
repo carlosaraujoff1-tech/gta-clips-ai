@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   RefreshCw,
   Scissors,
+  SlidersHorizontal,
   Sparkles,
   Trash2,
   TriangleAlert,
@@ -30,10 +31,12 @@ import {
 } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { formatDuration } from "@/lib/format";
-import type { Clip, ClipStatus, Job, Page } from "@/lib/types";
+import type { Clip, ClipStatus, Job, Page, UserSettings } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
 import { JobsPanel } from "../lives/jobs-panel";
+
+import { ClipEditor } from "./clip-editor";
 
 const FILTERS: Array<{ value: ClipStatus | "all"; label: string }> = [
   { value: "all", label: "Todos" },
@@ -63,10 +66,12 @@ function ClipCard({
   clip,
   onChanged,
   onJobStarted,
+  onEdit,
 }: {
   clip: Clip;
   onChanged: () => void;
   onJobStarted: () => void;
+  onEdit: () => void;
 }) {
   const [busy, setBusy] = useState<"render" | "discard" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +112,11 @@ function ClipCard({
             key={clip.rendered_at ?? clip.id}
             className="h-full w-full object-contain"
             src={`/api/clips/${clip.id}/video`}
+            poster={
+              clip.has_thumbnail
+                ? `/api/clips/${clip.id}/thumbnail?v=${clip.rendered_at ?? ""}`
+                : undefined
+            }
             controls
             playsInline
             preload="metadata"
@@ -186,6 +196,22 @@ function ClipCard({
           </div>
         ) : null}
 
+        {clip.render_info && clip.has_video ? (
+          <p className="text-xs text-ink-faint">
+            Vídeo de {Math.round(clip.render_info.duration)}s
+            {clip.render_info.cuts > 0
+              ? ` · ${clip.render_info.cuts} pausa${clip.render_info.cuts > 1 ? "s" : ""} cortada${clip.render_info.cuts > 1 ? "s" : ""} (−${clip.render_info.removed_seconds.toFixed(1).replace(".", ",")}s)`
+              : ""}
+            {clip.render_info.encoder === "h264_amf" ? " · GPU AMD" : " · CPU"}
+          </p>
+        ) : null}
+        {clip.render_outdated ? (
+          <p className="flex gap-1.5 rounded-lg border border-warn/30 bg-warn/[0.06] p-2 text-xs text-warn">
+            <TriangleAlert className="size-3.5 shrink-0" aria-hidden />A edição mudou depois do
+            último vídeo. Clique em “Refazer edição”.
+          </p>
+        ) : null}
+
         {clip.render_error ? (
           <p className="flex gap-1.5 text-xs text-bad">
             <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
@@ -195,6 +221,11 @@ function ClipCard({
         {error ? <p className="text-xs text-bad">{error}</p> : null}
 
         <div className="mt-auto flex flex-wrap gap-2 pt-1">
+          {clip.status !== "approved" && !rendering ? (
+            <Button icon={SlidersHorizontal} onClick={onEdit}>
+              Editar
+            </Button>
+          ) : null}
           {clip.status === "draft" ? (
             <>
               <Button variant="primary" icon={Wand2} onClick={render} loading={busy === "render"}>
@@ -241,6 +272,8 @@ export function ClipsView() {
     pollMs: (d) => (d?.items.some((c) => c.status === "rendering") ? 2000 : undefined),
   });
   const jobStarted = useCallback(() => setJobsKey((k) => k + 1), []);
+  const settings = useApi<UserSettings>("/settings");
+  const [editing, setEditing] = useState<Clip | null>(null);
 
   return (
     <>
@@ -263,8 +296,9 @@ export function ClipsView() {
             aprovação. Nada é publicado sem você aprovar.
           </p>
           <p className="mt-1 text-xs text-ink-faint">
-            A edição automática é uma prévia da Fase 5 (formato, legendas, zoom e áudio). Ajustes
-            finos de enquadramento e estilo chegam na Fase 5.
+            Use <span className="text-ink">Editar</span> para ajustar início/fim, título,
+            enquadramento e foco de cada corte. O estilo padrão (legendas, câmera, áudio) fica em
+            Configurações.
           </p>
         </div>
       </div>
@@ -313,7 +347,13 @@ export function ClipsView() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               {data.items.map((clip) => (
-                <ClipCard key={clip.id} clip={clip} onChanged={reload} onJobStarted={jobStarted} />
+                <ClipCard
+                  key={clip.id}
+                  clip={clip}
+                  onChanged={reload}
+                  onJobStarted={jobStarted}
+                  onEdit={() => setEditing(clip)}
+                />
               ))}
             </div>
           )}
@@ -322,6 +362,18 @@ export function ClipsView() {
           <JobsPanel refreshKey={jobsKey} onSettled={reload} />
         </div>
       </div>
+
+      {editing && settings.data ? (
+        <ClipEditor
+          clip={editing}
+          defaults={settings.data.render}
+          onClose={() => setEditing(null)}
+          onSaved={(rendering) => {
+            reload();
+            if (rendering) jobStarted();
+          }}
+        />
+      ) : null}
     </>
   );
 }
