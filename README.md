@@ -43,6 +43,8 @@ gta-clips-ai/
 
 ## Como rodar no Windows (desenvolvimento)
 
+> **Guia completo, do zero, com todos os comandos:** [`docs/INSTALACAO-WINDOWS.md`](docs/INSTALACAO-WINDOWS.md). Depois de instalado, o atalho `scripts\iniciar.bat` abre o sistema.
+
 ### Pré-requisitos
 
 - **Python 3.11** e **uv** (gerenciador de pacotes Python) — `winget install astral-sh.uv`
