@@ -150,3 +150,36 @@ def remap_words(words: Sequence[Word], keeps: Sequence[Interval]) -> list[Word]:
             end = start + 0.2
         out.append(Word(start, max(end, start + 0.05), w.text))
     return out
+
+
+def limit_cuts(keeps: Sequence[Interval], duration: float, min_final: float) -> list[Interval]:
+    """Never let the cut video drop below ``min_final`` seconds.
+
+    If removing every pause would make the clip shorter than the minimum, only the
+    *longest* pauses stay removed and the shorter ones are put back.
+    """
+    if min_final <= 0 or duration <= min_final or len(keeps) < 2:
+        return list(keeps)
+    if kept_duration(keeps) >= min_final:
+        return list(keeps)
+    # gaps between the kept pieces = the removed pauses (the head/tail are never cut)
+    gaps = [(keeps[i][1], keeps[i + 1][0]) for i in range(len(keeps) - 1)]
+    allowed = duration - min_final  # seconds we are still allowed to remove
+    removed: list[Interval] = []
+    for gap in sorted(gaps, key=lambda g: g[1] - g[0], reverse=True):
+        length = gap[1] - gap[0]
+        if length <= allowed:
+            removed.append(gap)
+            allowed -= length
+    if not removed:
+        return [(0.0, duration)]
+    removed.sort()
+    out: list[Interval] = []
+    cursor = 0.0
+    for a, b in removed:
+        if a > cursor:
+            out.append((round(cursor, 3), round(a, 3)))
+        cursor = b
+    if cursor < duration:
+        out.append((round(cursor, 3), round(duration, 3)))
+    return out

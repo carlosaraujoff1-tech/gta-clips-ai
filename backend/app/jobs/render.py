@@ -104,6 +104,8 @@ def render_clip(ctx: JobContext) -> dict[str, Any]:
                 keeps = jumpcuts.keep_intervals(
                     words, jumpcuts.loudness_frames(clip_audio), duration
                 )
+                # Respect the minimum clip length chosen in Settings.
+                keeps = jumpcuts.limit_cuts(keeps, duration, ctx.settings.ai.clip_min_seconds)
             except (AudioExtractionError, ValueError, OSError) as exc:
                 log.warning("jump_cuts_skipped", error=str(exc))
             finally:

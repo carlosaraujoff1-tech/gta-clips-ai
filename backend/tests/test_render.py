@@ -226,3 +226,18 @@ def test_settings_reject_region_outside_frame(client: TestClient) -> None:
     body["render"]["facecam"] = {"x": 0.8, "y": 0.0, "w": 0.5, "h": 0.3}
     resp = client.put("/api/settings", json=body, headers=CLIENT_HEADERS)
     assert resp.status_code == 422
+
+
+def test_limit_cuts_respects_minimum_length() -> None:
+    # 100 s clip with three pauses: 30 s, 12 s and 5 s (47 s removable, 53 s kept).
+    keeps = [(0.0, 20.0), (50.0, 60.0), (72.0, 90.0), (95.0, 100.0)]
+    assert jumpcuts.kept_duration(keeps) == pytest.approx(53.0)
+    limited = jumpcuts.limit_cuts(keeps, 100.0, 60.0)
+    # Only 40 s may go: the 30 s pause and the 5 s pause fit; the 12 s one is put back.
+    assert jumpcuts.kept_duration(limited) >= 60.0
+    assert limited[0] == (0.0, 20.0) and len(limited) == 3
+    # Already long enough, or no minimum: untouched.
+    assert jumpcuts.limit_cuts(keeps, 100.0, 40.0) == keeps
+    assert jumpcuts.limit_cuts(keeps, 100.0, 0.0) == keeps
+    # A clip shorter than the minimum can't be fixed by un-cutting: left alone.
+    assert jumpcuts.limit_cuts(keeps, 50.0, 60.0) == keeps
