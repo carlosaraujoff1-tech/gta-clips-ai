@@ -211,17 +211,34 @@ def analyze_recording(ctx: JobContext) -> dict[str, Any]:
 
     seconds = round(time.monotonic() - started, 1)
     found = len(chosen)
-    ctx.progress(
-        1.0,
-        f"Concluída: {found} momento(s) encontrado(s)"
-        + (" (análise rápida, sem IA)" if mode != "ai" else "")
-        + ".",
-        force=True,
-    )
+    above_score = sum(c.score >= ai.min_clip_score for c in candidates)
+    summary = f"Concluída: {found} momento(s) encontrado(s)"
+    if mode != "ai":
+        summary += " (análise rápida, sem IA)"
+    if found == 0:
+        # Say *where* the moments were lost, so the user knows what to change.
+        if not candidates:
+            summary += (
+                ". A IA não indicou nenhum trecho válido"
+                if mode == "ai"
+                else ". Nenhum pico de emoção foi detectado"
+            )
+        elif above_score == 0:
+            summary += (
+                f". A IA indicou {len(candidates)}, mas todos ficaram abaixo da nota "
+                f"mínima ({ai.min_clip_score:g}): reduza a nota mínima"
+            )
+        else:
+            summary += (
+                f". {above_score} passaram da nota, mas se sobrepunham a cortes já "
+                "existentes (aprovados, rejeitados ou gerados)"
+            )
+    ctx.progress(1.0, summary + ".", force=True)
     return {
         "recording_id": recording_id,
         "mode": mode,
         "candidates": len(candidates),
+        "above_min_score": above_score,
         "clips": found,
         "seconds": seconds,
     }
