@@ -204,9 +204,19 @@ def _check_python_package(key: str, name: str, module: str, phase: int) -> Servi
     )
 
 
+def _os_label() -> str:
+    system, release, version = platform.system(), platform.release(), platform.version()
+    if system == "Windows":
+        # Python reports "10" on Windows 11 too; builds >= 22000 are Windows 11.
+        build = int(version.split(".")[-1]) if version.split(".")[-1].isdigit() else 0
+        if release == "10" and build >= 22000:
+            release = "11"
+    return f"{system} {release} ({version})"
+
+
 def _host_info() -> HostInfo:
     return HostInfo(
-        os=f"{platform.system()} {platform.release()} ({platform.version()})",
+        os=_os_label(),
         machine=platform.machine(),
         cpu_threads=os.cpu_count(),
         python_version=sys.version.split()[0],
@@ -248,7 +258,6 @@ async def get_system_status(settings: UserSettings, refresh: bool = False) -> Sy
         *ffmpeg_statuses,
         _check_python_package("faster_whisper", "Faster-Whisper", "faster_whisper", 3),
         *ollama_statuses,
-        _check_python_package("opencv", "OpenCV", "cv2", 5),
     ]
     status = SystemStatus(checked_at=now, host=_host_info(), services=services)
     _cache = (now, fingerprint, status)
