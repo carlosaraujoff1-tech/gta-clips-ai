@@ -171,6 +171,8 @@ export interface RenderSettings {
   subtitle_position: "lower" | "middle";
   subtitle_font: string;
   show_title: boolean;
+  title_style: "impact" | "box";
+  title_size: "l" | "xl";
   zoom: boolean;
   jump_cuts: boolean;
   voice_boost: boolean;

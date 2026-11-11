@@ -113,6 +113,10 @@ SUB_MARGIN_V = {"lower": 430, "middle": 780}
 # Title vertical position per layout: above the gameplay window (blur), over the
 # footage (crop), just below the webcam band so it never covers the face (facecam),
 # and at the very top for sources that are already vertical (faces are usually there).
+TITLE_SIZES = {"l": 74, "xl": 92}
+TITLE_YELLOW = "&H0000E5FF"  # #FFE500
+TITLE_PURPLE_SHADOW = "&H64F65C8B"  # app violet, slightly transparent
+
 TITLE_MARGIN_V = {"blur": 250, "crop": 230, "facecam": 668, "vertical": 70}
 
 
@@ -125,6 +129,8 @@ class CaptionStyle:
     position: str = "lower"
     layout: str = "blur"
     watermark: str = ""
+    title_style: str = "impact"
+    title_size: str = "xl"
 
 
 def _display(word: str) -> str:
@@ -170,6 +176,18 @@ def build_ass(
             f"-1,0,0,0,100,100,1,0,1,7,3,2,90,90,{margin_v},1"
         )
     title_v = TITLE_MARGIN_V.get(c.layout, 250)
+    if c.title_style == "box":
+        title_style = (
+            f"Style: Title,{safe_font},62,{WHITE},{WHITE},{TITLE_BOX},{TITLE_BOX},"
+            f"-1,0,0,0,100,100,0,0,3,18,0,8,110,110,{title_v},1"
+        )
+    else:
+        # "Destaque": big uppercase yellow, thick black outline, violet drop shadow.
+        title_style = (
+            f"Style: Title,{safe_font},{TITLE_SIZES.get(c.title_size, 92)},{TITLE_YELLOW},"
+            f"{TITLE_YELLOW},{BLACK},{TITLE_PURPLE_SHADOW},-1,0,0,0,100,100,1,0,1,9,6,8,"
+            f"70,70,{title_v},1"
+        )
     header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {WIDTH}
@@ -181,7 +199,7 @@ YCbCr Matrix: TV.709
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 {sub_style}
-Style: Title,{safe_font},62,{WHITE},{WHITE},{TITLE_BOX},{TITLE_BOX},-1,0,0,0,100,100,0,0,3,18,0,8,110,110,{title_v},1
+{title_style}
 Style: Mark,{safe_font},38,&H40FFFFFF,&H40FFFFFF,&H90000000,&H00000000,-1,0,0,0,100,100,1,0,1,3,0,2,90,90,{max(margin_v - 150, 150)},1
 
 [Events]
@@ -189,9 +207,16 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     events: list[str] = []
     if title:
-        events.append(
-            f"Dialogue: 1,{_ts(0)},{_ts(duration)},Title,,0,0,0,,{{\\fad(250,0)}}{_clean(title)}"
-        )
+        if c.title_style == "box":
+            text = "{\\fad(250,0)}" + _clean(title)
+        else:
+            # Pop-in (70% -> 108% -> 100%) and a slight tilt, like viral edits.
+            text = (
+                "{\\fad(120,0)\\frz2\\fscx70\\fscy70"
+                "\\t(0,160,\\fscx108\\fscy108)\\t(160,260,\\fscx100\\fscy100)}"
+                + _clean(title).upper()
+            )
+        events.append(f"Dialogue: 1,{_ts(0)},{_ts(duration)},Title,,0,0,0,,{text}")
     if c.watermark:
         events.append(f"Dialogue: 1,{_ts(0)},{_ts(duration)},Mark,,0,0,0,,{_clean(c.watermark)}")
 

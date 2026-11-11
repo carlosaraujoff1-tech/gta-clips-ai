@@ -702,6 +702,40 @@ function SettingsForm({ initial }: { initial: UserSettings }) {
         </div>
 
         <h3 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-ink-faint">
+          Título
+        </h3>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <Field
+            label="Estilo do título"
+            htmlFor="title-style"
+            hint="Destaque = grande, amarelo, com contorno."
+          >
+            <select
+              id="title-style"
+              className={inputClass}
+              value={form.render.title_style}
+              onChange={(e) =>
+                update("render", { title_style: e.target.value as R["title_style"] })
+              }
+            >
+              <option value="impact">Destaque (amarelo, caixa alta)</option>
+              <option value="box">Caixa roxa (discreto)</option>
+            </select>
+          </Field>
+          <Field label="Tamanho do título" htmlFor="title-size" hint="Vale para o estilo Destaque.">
+            <select
+              id="title-size"
+              className={inputClass}
+              value={form.render.title_size}
+              onChange={(e) => update("render", { title_size: e.target.value as R["title_size"] })}
+            >
+              <option value="xl">Extra grande</option>
+              <option value="l">Grande</option>
+            </select>
+          </Field>
+        </div>
+
+        <h3 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-wider text-ink-faint">
           Áudio e acabamento
         </h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

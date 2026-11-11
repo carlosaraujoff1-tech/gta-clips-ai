@@ -145,6 +145,8 @@ SubtitleSize = Literal["m", "l", "xl"]
 SubtitlePosition = Literal["lower", "middle"]
 HighlightColor = Literal["yellow", "green", "violet", "red"]
 VerticalLayout = Literal["blur", "crop", "facecam"]
+TitleStyle = Literal["impact", "box"]
+TitleSize = Literal["l", "xl"]
 
 
 class Region(_Strict):
@@ -173,6 +175,8 @@ class RenderSettings(_Strict):
     subtitle_position: SubtitlePosition = "lower"
     subtitle_font: str = Field(default="Arial Black", min_length=1, max_length=60)
     show_title: bool = True
+    title_style: TitleStyle = "impact"  # impact = big yellow uppercase; box = violet box
+    title_size: TitleSize = "xl"
     zoom: bool = True  # slow push-in, or alternating punch-ins when jump cuts are on
     jump_cuts: bool = True  # remove pauses with no speech *and* no game sound
     voice_boost: bool = True  # high-pass + gentle compression before loudness normalisation

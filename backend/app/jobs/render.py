@@ -142,6 +142,8 @@ def render_clip(ctx: JobContext) -> dict[str, Any]:
                     position=settings.subtitle_position,
                     layout="vertical" if job.is_portrait else edit["layout"],
                     watermark=settings.watermark,
+                    title_style=settings.title_style,
+                    title_size=settings.title_size,
                 ),
                 show_subtitles=edit["subtitles"],
             ),
