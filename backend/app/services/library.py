@@ -19,7 +19,9 @@ from app.services.media_probe import MediaInfo, ProbeError, probe_file
 log = get_logger(__name__)
 
 # Containers produced by OBS / Streamlabs / common recorders.
-VIDEO_EXTENSIONS = frozenset({".mp4", ".mkv", ".mov", ".flv", ".ts", ".webm", ".avi", ".m4v"})
+VIDEO_EXTENSIONS = frozenset(
+    {".mp4", ".mkv", ".mov", ".flv", ".ts", ".m2ts", ".mpg", ".mpeg", ".webm", ".avi", ".m4v"}
+)
 PARTIAL_SUFFIX = ".part"
 COPY_CHUNK_BYTES = 8 * 1024 * 1024
 FREE_SPACE_MARGIN_BYTES = 1024 * 1024 * 1024  # keep at least 1 GB free after copying

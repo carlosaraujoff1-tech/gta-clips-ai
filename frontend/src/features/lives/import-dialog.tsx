@@ -86,7 +86,7 @@ export function ImportDialog({
         <Field
           label="Caminho completo do arquivo"
           htmlFor="import-path"
-          hint="Formatos: .mp4, .mkv, .mov, .flv, .ts, .webm, .avi, .m4v"
+          hint="Formatos: .mp4, .mkv, .mov, .flv, .ts, .m2ts, .mpg, .mpeg, .webm, .avi, .m4v"
         >
           <input
             ref={inputRef}
