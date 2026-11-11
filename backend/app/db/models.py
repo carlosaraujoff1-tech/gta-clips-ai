@@ -205,6 +205,7 @@ class Clip(TimestampMixin, Base):
         _enum(ClipStatus), default=ClipStatus.DRAFT, nullable=False, index=True
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reject_reason: Mapped[str | None] = mapped_column(Text)
 
     recording: Mapped[Recording] = relationship(back_populates="clips")
     publications: Mapped[list[Publication]] = relationship(back_populates="clip")

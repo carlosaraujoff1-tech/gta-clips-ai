@@ -15,8 +15,8 @@ Tudo roda no seu computador: sem APIs pagas, sem nuvem, funcionando offline depo
 | 3 | Transcrição (Faster-Whisper) | ✅ Concluída (aguardando validação no PC Windows) |
 | 4 | Inteligência artificial (Ollama + Qwen3 4B) | ✅ Concluída (aguardando validação no PC Windows) |
 | 5 | Edição automática (FFmpeg, 9:16, legendas) | ✅ Concluída (aguardando validação no PC Windows) |
-| 6 | Aprovação | ⏳ Aguardando autorização |
-| 7 | Publicação | — |
+| 6 | Aprovação | ✅ Concluída (aguardando validação no PC Windows) |
+| 7 | Publicação | ⏳ Aguardando autorização |
 | 8 | Métricas | — |
 
 ## Estrutura
@@ -160,6 +160,26 @@ Estilo padrão em **Configurações → Edição do vídeo**; ajuste fino de cad
 > Por que `qwen3:4b-instruct` e não `qwen3:4b`? No Ollama, `qwen3:4b` é a variante que
 > "pensa em voz alta" antes de responder, muito mais lenta. A Instruct é o mesmo Qwen3 4B
 > quantizado, respondendo direto.
+
+## Aprovação (Fase 6)
+
+Na página **Aprovação** cada corte com vídeo pronto passa por você antes de qualquer destino:
+
+- Fila ordenada pela nota, player vertical, motivo da escolha da IA e abertura do corte.
+- **Aprovar** (`A`), **Rejeitar** (`R`, com motivo opcional), navegar com `←`/`→`; depois da
+  decisão o sistema pula para o próximo corte.
+- Edite o **título** (gravado no vídeo: o sistema pede para refazer o vídeo) e a **descrição da
+  postagem** (texto e hashtags, não aparece no vídeo). **Editar edição** abre o editor do corte.
+- Abas **Aprovados** e **Rejeitados**, com **Desfazer aprovação** e **Reabrir**.
+- **Corte manual**: na gaveta da live, informe título, início e fim para criar um corte que a
+  IA não sugeriu (ele também passa por vídeo e aprovação).
+
+Regras que o sistema impõe:
+- Só é possível aprovar um corte com **vídeo existente e atualizado** (se o título, trecho ou
+  enquadramento mudou depois de gerar o vídeo, é preciso refazê-lo).
+- Corte aprovado fica **travado** (sem editar nem refazer) até desfazer a aprovação.
+- **Aprovar não publica nada.** A publicação (Fase 7) será uma ação separada e só aceitará
+  cortes aprovados.
 
 ## Princípios
 

@@ -22,6 +22,7 @@ from app.api.routes import (
     jobs,
     library,
     recordings,
+    review,
     settings,
     system,
     transcription,
@@ -84,6 +85,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
         system,
         recordings,
         transcription,
+        review,  # before clips: "/clips/counts" must win over "/clips/{clip_id}"
         clips,
         jobs,
         library,

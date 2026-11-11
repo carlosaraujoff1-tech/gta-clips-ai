@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   RefreshCw,
   Save,
+  Scissors,
   Sparkles,
   Trash2,
   TriangleAlert,
@@ -33,7 +34,7 @@ function Meta({ label, value }: { label: string; value: string }) {
   );
 }
 
-type Busy = "save" | "probe" | "delete" | "transcribe" | "analyze";
+type Busy = "save" | "probe" | "delete" | "transcribe" | "analyze" | "manual";
 
 export function RecordingDrawer({
   recording,
@@ -111,6 +112,27 @@ export function RecordingDrawer({
       });
       onJobStarted(job);
       setMessage({ ok: true, text: "Transcrição adicionada à fila. Acompanhe em Tarefas." });
+    });
+
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualStart, setManualStart] = useState(0);
+  const [manualEnd, setManualEnd] = useState(30);
+  const manualLength = manualEnd - manualStart;
+  const manualMax = recording.duration_seconds ?? Infinity;
+  const manualInvalid =
+    !manualTitle.trim() || manualLength < 3 || manualLength > 180 || manualEnd > manualMax + 0.01;
+
+  const createManual = () =>
+    run("manual", async () => {
+      await api.post(`/recordings/${recording.id}/clips`, {
+        title: manualTitle.trim(),
+        start_seconds: manualStart,
+        end_seconds: manualEnd,
+      });
+      setManualOpen(false);
+      setManualTitle("");
+      setMessage({ ok: true, text: "Corte criado. Gere o vídeo em Clips." });
     });
 
   const analyze = (mode: "ai" | "heuristic") =>
@@ -332,6 +354,88 @@ export function RecordingDrawer({
                     ) : null}
                   </div>
                 </>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-faint">
+              Corte manual
+            </h3>
+            <div className="rounded-xl border border-line bg-canvas/40 p-3">
+              {!manualOpen ? (
+                <>
+                  <p className="text-sm text-ink-muted">
+                    Escolheu um momento que a IA não sugeriu? Crie o corte informando o trecho.
+                  </p>
+                  <div className="mt-3">
+                    <Button icon={Scissors} onClick={() => setManualOpen(true)}>
+                      Criar corte manual
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <Field label="Título do corte" htmlFor="manual-title">
+                    <input
+                      id="manual-title"
+                      className={inputClass}
+                      value={manualTitle}
+                      maxLength={120}
+                      onChange={(e) => setManualTitle(e.target.value)}
+                    />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field
+                      label="Início (s)"
+                      htmlFor="manual-start"
+                      hint={formatDuration(manualStart)}
+                    >
+                      <input
+                        id="manual-start"
+                        type="number"
+                        step="any"
+                        min={0}
+                        className={inputClass}
+                        value={manualStart}
+                        onChange={(e) => setManualStart(Number(e.target.value) || 0)}
+                      />
+                    </Field>
+                    <Field label="Fim (s)" htmlFor="manual-end" hint={formatDuration(manualEnd)}>
+                      <input
+                        id="manual-end"
+                        type="number"
+                        step="any"
+                        min={0}
+                        className={inputClass}
+                        value={manualEnd}
+                        onChange={(e) => setManualEnd(Number(e.target.value) || 0)}
+                      />
+                    </Field>
+                  </div>
+                  <p
+                    className={cx(
+                      "text-xs",
+                      manualLength < 3 || manualLength > 180 ? "text-bad" : "text-ink-faint",
+                    )}
+                  >
+                    Duração: {manualLength.toFixed(1).replace(".", ",")}s (entre 3 e 180 s)
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="primary"
+                      icon={Scissors}
+                      onClick={createManual}
+                      loading={busy === "manual"}
+                      disabled={manualInvalid || busy !== null}
+                    >
+                      Criar corte
+                    </Button>
+                    <Button variant="ghost" onClick={() => setManualOpen(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           </section>

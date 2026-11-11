@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleCheck, CircleX, Download, Pencil, Send, ShieldCheck } from "lucide-react";
+import { Download, Send } from "lucide-react";
 
 import { PLATFORM_LABEL, PublicationStatusBadge } from "@/components/status";
 import {
@@ -12,8 +12,8 @@ import {
   PlannedButton,
   Skeleton,
 } from "@/components/ui";
-import { formatDate, formatDuration } from "@/lib/format";
-import type { Clip, Page, Publication } from "@/lib/types";
+import { formatDate } from "@/lib/format";
+import type { Page, Publication } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
 function LoadingRows() {
@@ -28,71 +28,6 @@ function LoadingRows() {
 
 function TotalLabel({ total }: { total: number }) {
   return <span className="text-xs text-ink-faint">{total} no total</span>;
-}
-
-/* --------------------------------------------------------------- Approval */
-
-export function ApprovalView() {
-  const { data, error, reload } = useApi<Page<Clip>>("/clips?limit=100&status=pending_review");
-  return (
-    <>
-      <PageHeader
-        title="Aprovação"
-        description="Assista, aprove ou rejeite cada corte. Nada é publicado sem a sua aprovação explícita."
-      />
-      <div className="animate-fade-in mb-6 flex gap-3 rounded-2xl border border-ok/25 bg-ok/[0.05] p-4 text-sm">
-        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-ok" aria-hidden />
-        <p className="text-ink-muted">
-          <span className="font-medium text-ink">Regra do sistema:</span> nenhum corte é publicado
-          automaticamente. Todo conteúdo passa por esta tela e só segue para publicação depois que
-          você aprovar.
-        </p>
-      </div>
-      <PhaseNotice phase={6} title="Player e revisão de cortes">
-        Vai incluir player de vídeo, aprovação, rejeição e edição de título, descrição e trecho.
-      </PhaseNotice>
-      <Card
-        title="Aguardando aprovação"
-        icon={CircleCheck}
-        action={data ? <TotalLabel total={data.total} /> : null}
-      >
-        {error ? (
-          <ErrorState message={error.message} onRetry={reload} />
-        ) : !data ? (
-          <LoadingRows />
-        ) : data.items.length === 0 ? (
-          <EmptyState icon={CircleCheck} title="Nenhum corte aguardando aprovação">
-            Quando houver cortes renderizados, eles aparecerão aqui para sua revisão.
-          </EmptyState>
-        ) : (
-          <ul className="divide-y divide-line">
-            {data.items.map((clip) => (
-              <li key={clip.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">{clip.title}</p>
-                  <p className="text-xs text-ink-faint">
-                    {formatDuration(clip.end_seconds - clip.start_seconds)} · gerado em{" "}
-                    {formatDate(clip.created_at)}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <PlannedButton icon={Pencil} phase={6}>
-                    Editar
-                  </PlannedButton>
-                  <PlannedButton icon={CircleX} phase={6}>
-                    Rejeitar
-                  </PlannedButton>
-                  <PlannedButton icon={CircleCheck} phase={6}>
-                    Aprovar
-                  </PlannedButton>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-    </>
-  );
 }
 
 /* ----------------------------------------------------------- Publications */

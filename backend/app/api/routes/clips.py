@@ -215,6 +215,7 @@ class ClipUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     title: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=2000)
     start_seconds: float | None = Field(default=None, ge=0)
     end_seconds: float | None = Field(default=None, gt=0)
     edit: ClipEdit | None = None
@@ -253,6 +254,8 @@ def update_clip(clip_id: int, payload: ClipUpdate, db: DbSession) -> ClipOut:
         if payload.title is None:
             raise AppError("validation_error", "O título não pode ficar vazio.")
         clip.title = payload.title
+    if "description" in changes:
+        clip.description = payload.description or None
     clip.start_seconds, clip.end_seconds = round(start, 2), round(end, 2)
     if "edit" in changes:
         clip.edit = payload.edit.model_dump() if payload.edit else None

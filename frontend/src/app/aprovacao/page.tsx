@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { ApprovalView } from "@/features/library/library-views";
+import { ApprovalView } from "@/features/approval/approval-view";
 
 export const metadata: Metadata = { title: "Aprovação" };
 

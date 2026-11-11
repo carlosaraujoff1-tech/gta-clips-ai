@@ -89,10 +89,12 @@ export interface Clip {
   reason: string | null;
   hook: string | null;
   score_details: { ai: number | null; signals: number; ai_weight: number } | null;
-  source: "ai" | "heuristic";
+  source: "ai" | "heuristic" | "manual";
   status: ClipStatus;
   rendered_at: string | null;
   render_error: string | null;
+  reviewed_at: string | null;
+  reject_reason: string | null;
   created_at: string;
   edit: ClipEdit | null;
   render_info: RenderInfo | null;
@@ -284,4 +286,13 @@ export interface Transcript {
   word_count: number;
   created_at: string;
   segments: TranscriptSegment[];
+}
+
+export interface ClipCounts {
+  draft: number;
+  rendering: number;
+  pending_review: number;
+  approved: number;
+  rejected: number;
+  failed: number;
 }

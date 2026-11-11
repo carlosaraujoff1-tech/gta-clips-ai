@@ -82,6 +82,8 @@ class ClipOut(BaseModel):
     status: ClipStatus
     rendered_at: datetime | None
     render_error: str | None
+    reviewed_at: datetime | None
+    reject_reason: str | None
     created_at: datetime
     edit: dict[str, Any] | None
     render_info: dict[str, Any] | None

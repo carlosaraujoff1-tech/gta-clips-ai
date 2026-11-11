@@ -158,6 +158,7 @@ function ClipCard({
             <Badge tone={CATEGORY_TONE[clip.category] ?? "neutral"}>{clip.category}</Badge>
           ) : null}
           {clip.source === "heuristic" ? <Badge>sem IA</Badge> : null}
+          {clip.source === "manual" ? <Badge>manual</Badge> : null}
         </div>
         <h3 className="text-sm font-semibold leading-snug text-ink">{clip.title}</h3>
         {clip.hook ? (

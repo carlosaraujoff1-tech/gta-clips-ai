@@ -135,6 +135,18 @@ Vocabulary hints are a plain word list (phrased as sentences, Whisper sometimes 
 into silent/music parts). `is_hallucination` drops repetitive filler when `no_speech_prob`
 is high and any segment made mostly of hint words; segments are also split at long pauses.
 
+### Review workflow (Phase 6)
+
+- `routes/review.py`: `approve` (only `pending_review`, video file present, render not
+  outdated), `reject` (draft or pending, optional reason), `reopen` (undo approval/rejection →
+  `pending_review`, or `draft` when there is no video), `GET /clips/counts`, and
+  `POST /recordings/{id}/clips` for manual clips. State changes are validated server-side
+  (HTTP 409 with a clear message); the UI only mirrors those rules.
+- Invariant for Phase 7: publishing must require `status == approved` **and** a current video;
+  approval itself never triggers any outbound action.
+- The review router is registered before the clips router so `/clips/counts` is not captured
+  by `/clips/{clip_id}`.
+
 ## Frontend
 
 - Next.js App Router, TypeScript `strict`, Tailwind v4 design tokens in `src/app/globals.css`.
