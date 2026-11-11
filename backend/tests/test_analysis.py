@@ -206,7 +206,7 @@ def test_ass_karaoke_and_injection_safety() -> None:
     ass = build_ass(words, 2.0, title="Fuga {\\pos}", caption=CaptionStyle(font="Arial Black"))
     assert "Style: Sub,Arial Black" in ass
     assert "POLÍCIA" in ass and "{\\b1}" not in ass  # speech can't inject ASS tags
-    assert "Fuga pos" in ass  # title braces/backslashes removed
+    assert "FUGA POS" in ass and "\\pos" not in ass  # title tags removed (uppercase style)
     assert ass.count("Dialogue: 0,") == 3  # one event per highlighted word
 
 
