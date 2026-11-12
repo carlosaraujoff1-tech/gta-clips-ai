@@ -93,7 +93,7 @@ function pro(
 export function buildSeed(): DB {
   const pros = [
     pro(1, "Aline Souza", "Elegância para jantares e eventos", "São Paulo", "Jardins", ["Jantares & eventos", "Companhia"], 500, evenings, 28),
-    pro(2, "Juliana Prado", "Companhia leve e conversa marcante", "São Paulo", "Itaim Bibi", ["Companhia", "Conversa"], 450, allWeek, 355),
+    pro(2, "Juliana Silva", "Companhia leve e conversa marcante", "São Paulo", "Itaim Bibi", ["Companhia", "Conversa"], 450, allWeek, 355),
     pro(3, "Rafael Lima", "Parceiro para eventos e viagens", "São Paulo", "Vila Olímpia", ["Viagens", "Jantares & eventos"], 600, weekend, 210, "Homens", ["Discreto", "Bilíngue"], ["Português", "Espanhol"]),
     pro(4, "Helena Duarte", "Massagem relaxante com técnica", "Rio de Janeiro", "Leblon", ["Massagem relaxante"], 380, allWeek, 330),
     pro(5, "Bianca Rocha", "Noites cariocas com estilo", "Rio de Janeiro", "Ipanema", ["Vida noturna", "Companhia"], 520, weekend, 12),

@@ -28,7 +28,7 @@ import type {
   VerificationRequest,
 } from "./types";
 
-const KEY = "prive.db.v3";
+const KEY = "prive.db.v4";
 let state: DB | null = null;
 const listeners = new Set<() => void>();
 
