@@ -18,7 +18,9 @@ const ROLES = [
 
 export default function SignUpPage() {
   const router = useRouter();
-  const [role, setRole] = useState<(typeof ROLES)[number]["id"]>("client");
+  const [role, setRole] = useState<(typeof ROLES)[number]["id"]>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tipo") === "professional" ? "professional" : "client",
+  );
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,8 +46,8 @@ export default function SignUpPage() {
 
   return (
     <>
-      <TopBar back="/entrar" right={<Logo className="text-lg" />} />
-      <h1 className="font-display text-4xl leading-tight animate-rise">Criar cadastro</h1>
+      <TopBar back="/entrar" right={<Logo className="text-xl" />} />
+      <h1 className="font-display text-3xl leading-tight animate-rise">Criar conta</h1>
       <p className="mt-2 mb-6 text-sm text-ink-3">Seus dados são protegidos e nunca exibidos publicamente.</p>
 
       <form onSubmit={submit} className="space-y-4 animate-rise [animation-delay:60ms]">

@@ -2,27 +2,30 @@
 
 /* PRIVÉ — tokens de identidade visual */
 @theme {
-  --color-void: #050505;
-  --color-night: #0b0b0c;
-  --color-card: #121213;
-  --color-card-2: #19191b;
-  --color-line: #242426;
-  --color-line-2: #34322d;
+  --color-void: #000000;
+  --color-night: #0a0a0a;
+  --color-card: #111111;
+  --color-card-2: #1a1a1a;
+  --color-line: #262626;
+  --color-line-2: #3a3528;
 
   --color-ink: #f4efe6;
   --color-ink-2: #b9b2a5;
   --color-ink-3: #77726a;
 
-  --color-gold: #c9a961;
-  --color-gold-2: #e6cf96;
-  --color-gold-3: #8c7440;
+  --color-gold: #e0ad3e;
+  --color-gold-2: #f5d27a;
+  --color-gold-3: #9c7426;
+  --color-verified: #3b82f6;
+  --color-check: #22c55e;
 
   --color-ok: #7fbf8e;
   --color-warn: #e0b45a;
   --color-bad: #e07a6b;
 
   --font-sans: var(--font-manrope), system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-cormorant), "Times New Roman", serif;
+  --font-display: var(--font-manrope), system-ui, sans-serif;
+  --font-brand: var(--font-cinzel), "Times New Roman", serif;
 
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-fade: fade 0.6s ease both;
@@ -62,8 +65,13 @@ body {
   background: color-mix(in oklab, var(--color-gold) 40%, transparent);
 }
 
+.font-display {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
 .gold-text {
-  background: linear-gradient(100deg, #a8894a, #f1dda6 45%, #b8964f 70%, #e9d197);
+  background: linear-gradient(180deg, #f7dc8f, #e0ad3e 55%, #a97a22);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

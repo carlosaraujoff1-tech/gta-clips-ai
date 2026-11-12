@@ -1,5 +1,6 @@
 -- Simula o mínimo dos schemas auth/storage do Supabase para testar a migração num PostgreSQL comum.
-create role anon; create role authenticated;
+do $$ begin create role anon; exception when duplicate_object then null; end $$;
+do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
 create schema auth; create schema storage;
 create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}');
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;

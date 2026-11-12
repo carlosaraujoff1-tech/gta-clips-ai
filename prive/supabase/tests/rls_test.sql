@@ -66,3 +66,6 @@ select 'T9 após bloqueio vê perfil (esperado 0):', count(*) from professionals
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',false);
 delete from audit_log; select 'T10 auditoria intacta:', count(*) from audit_log;
 select 'T10b denúncias urgentes automáticas:', count(*) from reports where priority='urgent' and automatic;
+-- 11. usuário não se autopromove a premium
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+update accounts set plan='premium', plan_until=now()+interval '30 days' where id=auth.uid();

@@ -145,7 +145,23 @@ modo demonstração para o Supabase, função por função.
 - Cabeçalhos de segurança (HSTS, X-Frame-Options, noindex), service worker que não guarda dados privados.
 - Modo discreto (desfoca imagens) e app instalável sem histórico de navegador.
 
-## 7. Pontos jurídicos e de conformidade (sinalizados antes de implementar)
+## 7. Modelo de receita (implementado como demonstração)
+
+Receita por **assinatura e visibilidade**, nunca por encontro:
+
+| Produto | Público | Preço de referência |
+|---|---|---|
+| Cliente Premium | cliente | R$ 39,90/mês |
+| Perfil Premium (mais fotos, melhor posição, estatísticas) | profissional | R$ 99/mês |
+| Destaque 7 dias (topo da busca na cidade) | profissional | R$ 49,90 |
+| Vitrine de estabelecimento / publicidade | parceiros | a definir |
+
+As telas `/planos` e `/pagamento` seguem o visual do mockup (Pix, crédito, débito). Em demonstração,
+o checkout é **simulado**. Em produção, o pagamento é confirmado por webhook do gateway, que é o único
+que pode marcar a conta como premium (trigger `guard_account_plan`). Não existe tabela nem fluxo
+para pagar encontros, nem carteira com saldo.
+
+## 8. Pontos jurídicos e de conformidade (sinalizados antes de implementar)
 
 > Isto não é parecer jurídico. Valide com advogado(a) antes de lançar.
 

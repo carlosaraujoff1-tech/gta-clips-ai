@@ -10,7 +10,7 @@
  */
 import { useSyncExternalStore } from "react";
 
-import { CITIES, URGENT_REASONS } from "./config";
+import { CITIES, PLANS, URGENT_REASONS, type PlanId } from "./config";
 import { fromMinutes, isoDate, parseIso, toMinutes, uid } from "./format";
 import { hashPassword, isAdult, passwordIssues, scanMessage } from "./safety";
 import { buildSeed } from "./seed";
@@ -20,6 +20,7 @@ import type {
   BookingStatus,
   DB,
   Establishment,
+  Payment,
   Professional,
   ReportTarget,
   Role,
@@ -27,7 +28,7 @@ import type {
   VerificationRequest,
 } from "./types";
 
-const KEY = "prive.db.v1";
+const KEY = "prive.db.v2";
 let state: DB | null = null;
 const listeners = new Set<() => void>();
 
@@ -188,6 +189,8 @@ export async function signUp(input: {
       hue: Math.floor(Math.random() * 360),
       createdAt: ts,
       discreetMode: false,
+      plan: "free",
+      planUntil: null,
     });
     if (input.role === "professional") {
       d.professionals.push({
@@ -198,7 +201,10 @@ export async function signUp(input: {
         bio: "",
         city: "São Paulo",
         region: CITIES["São Paulo"][0],
+        kind: "Mulheres",
         categories: [],
+        tags: [],
+        serviceLocations: ["A combinar"],
         languages: ["Português"],
         priceFrom: null,
         verification: "none",
@@ -301,6 +307,7 @@ export interface SearchFilters {
   city?: string;
   region?: string;
   category?: string;
+  kind?: string;
   weekday?: number | null;
   maxPrice?: number | null;
   verifiedOnly?: boolean;
@@ -319,6 +326,7 @@ export function searchProfessionals(db: DB, f: SearchFilters, viewerId?: string 
     if (f.city && p.city !== f.city) return false;
     if (f.region && p.region !== f.region) return false;
     if (f.category && !p.categories.includes(f.category)) return false;
+    if (f.kind && p.kind !== f.kind) return false;
     if (f.weekday != null && !p.availability.some((s) => s.weekday === f.weekday)) return false;
     if (f.maxPrice && p.priceFrom && p.priceFrom > f.maxPrice) return false;
     if (q && !`${p.displayName} ${p.headline} ${p.region} ${p.city} ${p.categories.join(" ")}`.toLowerCase().includes(q))
@@ -378,6 +386,7 @@ export function requestBooking(input: {
   date: string;
   time: string;
   durationMin: number;
+  location?: string;
   note: string;
 }) {
   let id = "";
@@ -401,6 +410,7 @@ export function requestBooking(input: {
       date: input.date,
       time: input.time,
       durationMin: input.durationMin,
+      location: input.location ?? (est ? est.name : "A combinar"),
       note: scan.text.slice(0, 500),
       status: "requested",
       createdAt: now(),
@@ -613,7 +623,7 @@ export function myProfessional(db: DB, me: User | null) {
 }
 
 export function updateMyProfessional(
-  patch: Partial<Pick<Professional, "displayName" | "headline" | "bio" | "city" | "region" | "categories" | "languages" | "priceFrom" | "availability" | "slotMinutes" | "blockedDates">>,
+  patch: Partial<Pick<Professional, "displayName" | "headline" | "bio" | "city" | "region" | "categories" | "kind" | "tags" | "serviceLocations" | "languages" | "priceFrom" | "availability" | "slotMinutes" | "blockedDates">>,
 ) {
   commit((d) => {
     const u = requireUser(d, ["professional"]);
@@ -706,6 +716,37 @@ export function addEstablishmentPhoto(establishmentId: string, caption: string) 
     const e = d.establishments.find((x) => x.id === establishmentId && x.ownerId === u.id);
     if (!e) throw new AppError("Sem permissão.");
     e.photos.push({ id: uid(), hue: (e.hue + e.photos.length * 20) % 360, caption: caption || "Foto", status: "pending" });
+  });
+}
+
+// ───────────────────────── Planos (receita por assinatura, nunca por encontro) ─────────────────────────
+
+export function isPremium(u: User | null) {
+  return !!u && u.plan === "premium" && !!u.planUntil && u.planUntil > now();
+}
+
+/** Em demonstração o pagamento é SIMULADO: nenhum valor é cobrado. */
+export function subscribePlan(planId: PlanId, method: Payment["method"]) {
+  commit((d) => {
+    const u = requireUser(d);
+    const plan = PLANS[planId];
+    if (!plan) throw new AppError("Plano inválido.");
+    if (plan.audience !== u.role) throw new AppError("Este plano não está disponível para sua conta.");
+    const days = planId === "pro-destaque-7d" ? 7 : 30;
+    const user = d.users.find((x) => x.id === u.id)!;
+    const base = isPremium(user) ? new Date(user.planUntil!) : new Date();
+    user.plan = "premium";
+    user.planUntil = new Date(base.getTime() + days * 86400000).toISOString();
+    d.payments.unshift({ id: uid(), userId: u.id, planId, amount: plan.price, method, simulated: true, createdAt: now() });
+    notify(d, u.id, `${plan.name} ativado`, `Válido até ${new Date(user.planUntil).toLocaleDateString("pt-BR")}.`, "/conta");
+  });
+}
+
+export function cancelPlan() {
+  commit((d) => {
+    const u = d.users.find((x) => x.id === requireUser(d).id)!;
+    u.plan = "free";
+    u.planUntil = null;
   });
 }
 

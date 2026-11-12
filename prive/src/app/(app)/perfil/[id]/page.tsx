@@ -2,13 +2,13 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Ban, CalendarDays, Flag, Languages, MapPin, MessageCircle, MoreHorizontal, ShieldCheck, Share2 } from "lucide-react";
+import { ArrowLeft, Ban, Building2, CheckCircle2, Flag, Languages, MapPin, MessageCircle, MoreVertical, Share, ShieldCheck, Star } from "lucide-react";
 
 import { Art } from "@/components/art";
 import { useSession } from "@/components/guard";
-import { FavButton } from "@/components/profile-card";
+import { FavButton, distanceKm } from "@/components/profile-card";
 import { ReportSheet } from "@/components/report-sheet";
-import { Badge, Button, Empty, Sheet, Spinner, Stars, TopBar, VerifiedSeal, cn } from "@/components/ui";
+import { Button, Empty, Sheet, Spinner, Stars, TopBar, VerifiedSeal, cn } from "@/components/ui";
 import { FEATURES } from "@/lib/config";
 import { AppError, blockUser, isBlockedBetween, openConversation, ratingOf, userName } from "@/lib/db";
 import { WEEKDAYS, brl, relative } from "@/lib/format";
@@ -47,134 +47,119 @@ export default function ProfilePage() {
     }
   };
 
+  const kindLabel = p.kind === "Homens" ? "Verificado" : p.kind === "Casais" ? "Verificados" : "Verificada";
+
   return (
-    <div className="-mx-5">
+    <div className="-mx-5 pb-28">
       <div className="relative">
-        <div
-          className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"
-          onScroll={(e) => setPhoto(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        >
+        <div className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto" onScroll={(e) => setPhoto(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}>
           {photos.map((ph) => (
-            <Art key={ph.id} hue={ph.hue} label={p.displayName} className="aspect-[4/5] w-full shrink-0 snap-center rounded-none">
-              <span className="absolute bottom-24 left-5 text-[10px] tracking-[0.25em] text-ink-3 uppercase">{ph.caption}</span>
-            </Art>
+            <Art key={ph.id} hue={ph.hue} label={p.displayName} className="aspect-[4/4.2] w-full shrink-0 snap-center rounded-none" />
           ))}
         </div>
-        <div className="absolute inset-x-0 top-0 px-5">
-          <TopBar
-            back
-            right={
-              <>
-                <FavButton active={fav} id={p.id} />
-                <button aria-label="Mais opções" onClick={() => setMenu(true)} className="grid size-9 place-items-center rounded-full bg-black/40 backdrop-blur-md">
-                  <MoreHorizontal className="size-4" />
-                </button>
-              </>
-            }
-          />
+        <div className="safe-top absolute inset-x-0 top-0 flex h-14 items-center justify-between px-3">
+          <button aria-label="Voltar" onClick={() => router.back()} className="grid size-10 place-items-center">
+            <ArrowLeft className="size-6 drop-shadow" />
+          </button>
+          <div className="flex items-center">
+            <button
+              aria-label="Compartilhar"
+              onClick={() => navigator.share?.({ title: "PRIVÉ", url: window.location.href }).catch(() => undefined)}
+              className="grid size-10 place-items-center"
+            >
+              <Share className="size-[22px] drop-shadow" />
+            </button>
+            <FavButton active={fav} id={p.id} className="size-10" />
+            <button aria-label="Mais opções" onClick={() => setMenu(true)} className="grid size-10 place-items-center">
+              <MoreVertical className="size-[22px] drop-shadow" />
+            </button>
+          </div>
         </div>
-        <div className="absolute inset-x-0 bottom-20 flex justify-center gap-1.5">
-          {photos.map((ph, i) => (
-            <span key={ph.id} className={cn("h-1 rounded-full transition-all", i === photo ? "w-5 bg-gold" : "w-1.5 bg-white/30")} />
-          ))}
-        </div>
+        <span className="absolute right-4 bottom-4 rounded-full bg-black/60 px-2.5 py-1 text-xs backdrop-blur">
+          {photo + 1}/{photos.length}
+        </span>
       </div>
 
-      <div className="relative -mt-16 rounded-t-[32px] border-t border-line bg-void px-5 pt-6 animate-rise">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="font-display text-[40px] leading-none">{p.displayName}</h1>
-            <p className="mt-2 text-sm text-ink-2">{p.headline}</p>
-          </div>
-          {FEATURES.priceInfo && p.priceFrom && (
-            <div className="shrink-0 text-right">
-              <span className="block text-[10px] tracking-[0.2em] text-ink-3 uppercase">a partir de</span>
-              <span className="font-display text-2xl text-gold-2">{brl(p.priceFrom)}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-3">
-          <VerifiedSeal />
-          <span className="flex items-center gap-1">
-            <MapPin className="size-3.5" /> {p.region}, {p.city}
+      <div className="px-5 pt-4 animate-rise">
+        <h1 className="flex items-center gap-2 text-2xl font-bold">
+          {p.displayName} <VerifiedSeal compact />
+        </h1>
+        {count > 0 && (
+          <p className="mt-1 flex items-center gap-1.5 text-[15px]">
+            <Star className="size-4 fill-gold text-gold" /> <span className="text-gold">{avg.toFixed(1)}</span>
+            <span className="text-ink-2">({count} avaliações)</span>
+          </p>
+        )}
+        {FEATURES.priceInfo && p.priceFrom && (
+          <p className="mt-2">
+            <span className="text-[26px] font-bold text-gold">{brl(p.priceFrom)}</span> <span className="text-ink-2">/ 1h</span>
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-line-2 px-3 py-1 text-[13px]">
+            <CheckCircle2 className="size-4 fill-check text-black" /> {kindLabel}
           </span>
-          {count > 0 && (
-            <span className="flex items-center gap-1.5">
-              <Stars value={avg} size={12} /> {avg.toFixed(1)} ({count})
+          {p.tags.map((t) => (
+            <span key={t} className="rounded-full border border-line-2 px-3 py-1 text-[13px]">
+              {t}
             </span>
-          )}
+          ))}
         </div>
 
-        <div className="hairline my-6" />
+        <h2 className="mt-6 text-[17px] font-bold">Sobre mim</h2>
+        <p className="mt-2 text-[15px] leading-relaxed text-ink-2">{p.bio}</p>
 
-        <section>
-          <h2 className="mb-2 text-[11px] tracking-[0.2em] text-ink-3 uppercase">Sobre</h2>
-          <p className="text-[15px] leading-relaxed text-ink-2">{p.bio}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {p.categories.map((c) => (
-              <Badge key={c} tone="gold">
-                {c}
-              </Badge>
-            ))}
-          </div>
-          <p className="mt-4 flex items-center gap-2 text-sm text-ink-3">
-            <Languages className="size-4" /> {p.languages.join(" · ")}
+        <div className="mt-4 space-y-2 text-sm text-ink-2">
+          <p className="flex items-center gap-2">
+            <MapPin className="size-4 text-gold" /> {p.region}, {p.city} • {distanceKm(p.id)} km
           </p>
-        </section>
-
-        <section className="mt-7">
-          <h2 className="mb-3 text-[11px] tracking-[0.2em] text-ink-3 uppercase">Disponibilidade</h2>
-          <div className="grid grid-cols-7 gap-1.5">
-            {WEEKDAYS.map((d, i) => (
-              <div key={d} className={cn("rounded-xl border py-2 text-center text-[11px]", days.includes(i) ? "border-gold/40 text-gold-2" : "border-line text-ink-3/50")}>
-                {d}
-              </div>
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-ink-3">
-            {p.availability
-              .filter((a, i, arr) => arr.findIndex((x) => x.start === a.start && x.end === a.end) === i)
-              .map((a) => `${a.start}–${a.end}`)
-              .join(" · ")}
+          <p className="flex items-center gap-2">
+            <Languages className="size-4 text-gold" /> {p.languages.join(" · ")}
           </p>
-        </section>
+          <p className="flex items-center gap-2">
+            <Building2 className="size-4 text-gold" /> {p.serviceLocations.join(" · ")}
+          </p>
+        </div>
 
-        <section className="mt-7">
-          <h2 className="mb-3 text-[11px] tracking-[0.2em] text-ink-3 uppercase">Avaliações verificadas</h2>
-          {reviews.length === 0 ? (
-            <p className="text-sm text-ink-3">Ainda sem avaliações. Somente clientes com reserva concluída podem avaliar.</p>
-          ) : (
-            <ul className="space-y-3">
-              {reviews.map((r) => (
-                <li key={r.id} className="rounded-2xl border border-line bg-card p-4">
-                  <div className="flex items-center justify-between">
-                    <Stars value={r.rating} size={12} />
-                    <span className="text-[11px] text-ink-3">{relative(r.createdAt)}</span>
-                  </div>
-                  <p className="mt-2 text-sm text-ink-2">{r.text}</p>
-                  <p className="mt-2 flex items-center gap-1 text-[11px] text-ink-3">
-                    <ShieldCheck className="size-3 text-gold" /> {userName(db, r.authorId).split(" ")[0]} · reserva verificada
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <h2 className="mt-6 mb-3 text-[17px] font-bold">Disponibilidade</h2>
+        <div className="grid grid-cols-7 gap-1.5">
+          {WEEKDAYS.map((d, i) => (
+            <div key={d} className={cn("rounded-lg border py-2 text-center text-[11px]", days.includes(i) ? "border-gold/60 text-gold" : "border-line text-ink-3/50")}>
+              {d}
+            </div>
+          ))}
+        </div>
 
-        <p className="mt-8 text-center text-[11px] leading-relaxed text-ink-3">
-          Toda interação depende de consentimento mútuo. O PRIVÉ não intermedeia pagamentos.
-        </p>
+        <h2 className="mt-6 mb-3 text-[17px] font-bold">Avaliações verificadas</h2>
+        {reviews.length === 0 ? (
+          <p className="text-sm text-ink-3">Ainda sem avaliações. Só quem teve reserva concluída pode avaliar.</p>
+        ) : (
+          <ul className="space-y-2.5">
+            {reviews.slice(0, 4).map((r) => (
+              <li key={r.id} className="rounded-xl border border-line bg-card p-3.5">
+                <div className="flex items-center justify-between">
+                  <Stars value={r.rating} size={12} />
+                  <span className="text-[11px] text-ink-3">{relative(r.createdAt)}</span>
+                </div>
+                <p className="mt-1.5 text-sm text-ink-2">{r.text}</p>
+                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-ink-3">
+                  <ShieldCheck className="size-3 text-gold" /> {userName(db, r.authorId).split(" ")[0]} · reserva verificada
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-6 text-center text-[11px] text-ink-3">Valor informado pelo perfil e combinado diretamente. O PRIVÉ não cobra nem intermedeia encontros.</p>
         {error && <p className="mt-2 text-center text-sm text-bad">{error}</p>}
       </div>
 
-      <div className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line bg-void/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-lg gap-3 px-5 pt-3">
-          <Button variant="outline" onClick={contact} className="flex-1">
-            <MessageCircle className="size-4" /> Mensagem
-          </Button>
-          <Button onClick={() => router.push(`/perfil/${p.id}/agendar`)} className="flex-[1.6]">
-            <CalendarDays className="size-4" /> Solicitar horário
+      <div className="safe-bottom fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-black via-black/95 to-transparent pt-6">
+        <div className="mx-auto flex max-w-lg gap-2 px-5">
+          <button aria-label="Mensagem" onClick={contact} className="grid size-12 shrink-0 place-items-center rounded-xl border border-gold text-gold">
+            <MessageCircle className="size-5" />
+          </button>
+          <Button onClick={() => router.push(`/perfil/${p.id}/agendar`)} className="flex-1">
+            Reservar agora
           </Button>
         </div>
       </div>
@@ -189,7 +174,7 @@ export default function ProfilePage() {
               setMenu(false);
             }}
           >
-            <Share2 className="size-4" /> Compartilhar com discrição
+            <Share className="size-4" /> Compartilhar com discrição
           </Button>
           <Button
             variant="outline"

@@ -44,7 +44,7 @@ export default function EstablishmentPage() {
           ))}
       </div>
       <p className="mt-6 text-[10px] tracking-[0.25em] text-gold uppercase">{e.kind}</p>
-      <h1 className="font-display text-4xl">{e.name}</h1>
+      <h1 className="font-display text-3xl">{e.name}</h1>
       <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-3">
         <MapPin className="size-4" /> {e.address}
       </p>

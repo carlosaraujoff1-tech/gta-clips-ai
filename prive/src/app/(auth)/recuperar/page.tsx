@@ -38,7 +38,7 @@ export default function RecoverPage() {
       ) : (
         <form onSubmit={submit} className="space-y-5 animate-rise">
           <div>
-            <h1 className="font-display text-4xl">Recuperar senha</h1>
+            <h1 className="font-display text-3xl">Recuperar senha</h1>
             <p className="mt-2 text-sm text-ink-3">Informe o e-mail da sua conta.</p>
           </div>
           <Field label="E-mail">

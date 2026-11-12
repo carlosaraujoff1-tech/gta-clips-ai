@@ -22,7 +22,11 @@ export interface User {
   hue: number;
   createdAt: string;
   discreetMode: boolean;
+  plan: "free" | "premium";
+  planUntil: string | null;
 }
+
+export type ProfileKind = "Mulheres" | "Homens" | "Casais";
 
 export type Verification = "none" | "pending" | "verified" | "rejected";
 
@@ -47,7 +51,10 @@ export interface Professional {
   bio: string;
   city: string;
   region: string;
+  kind: ProfileKind;
   categories: string[];
+  tags: string[];
+  serviceLocations: string[];
   languages: string[];
   priceFrom: number | null;
   verification: Verification;
@@ -88,6 +95,7 @@ export interface Booking {
   date: string;
   time: string;
   durationMin: number;
+  location: string;
   note: string;
   status: BookingStatus;
   createdAt: string;
@@ -172,6 +180,16 @@ export interface AuditLog {
   createdAt: string;
 }
 
+export interface Payment {
+  id: string;
+  userId: string;
+  planId: string;
+  amount: number;
+  method: "pix" | "credit" | "debit";
+  simulated: boolean;
+  createdAt: string;
+}
+
 export interface DB {
   version: number;
   users: User[];
@@ -187,6 +205,7 @@ export interface DB {
   verifications: VerificationRequest[];
   notifications: Notification[];
   audit: AuditLog[];
+  payments: Payment[];
   adminPermissions: Record<string, AdminPermission[]>;
   sessionUserId: string | null;
 }

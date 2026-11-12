@@ -63,7 +63,7 @@ export default function BookingsPage() {
                   <Avatar hue={pro?.hue ?? est?.hue ?? 40} name={bookingTitle(db, b)} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <Link href={href} className="font-display truncate text-xl">
+                      <Link href={href} className="font-display truncate text-lg">
                         {bookingTitle(db, b)}
                       </Link>
                       <BookingStatusBadge status={b.status} />

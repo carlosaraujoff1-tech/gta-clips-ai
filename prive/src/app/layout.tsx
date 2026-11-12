@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { Cinzel, Manrope } from "next/font/google";
 
 import { ClientRuntime } from "@/components/client-runtime";
 
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-cormorant", display: "swap" });
+const cinzel = Cinzel({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-cinzel", display: "swap" });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#050505",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -27,7 +27,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${cormorant.variable} ${manrope.variable} antialiased`}>
+    <html lang="pt-BR" className={`${cinzel.variable} ${manrope.variable} antialiased`}>
       <body className="min-h-dvh">
         <ClientRuntime />
         {children}

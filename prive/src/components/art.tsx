@@ -48,10 +48,29 @@ export function Avatar({ hue, name, size = 44 }: { hue: number; name: string; si
   );
 }
 
-export function Logo({ className }: { className?: string }) {
+export function Crown({ className }: { className?: string }) {
   return (
-    <span className={cn("font-display inline-flex items-baseline tracking-[0.32em]", className)}>
-      <span className="gold-text">PRIVÉ</span>
+    <svg viewBox="0 0 48 28" className={className} aria-hidden>
+      <defs>
+        <linearGradient id="crown-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#f7dc8f" />
+          <stop offset="1" stopColor="#b8862a" />
+        </linearGradient>
+      </defs>
+      <path d="M4 24 L2 6 L14 15 L24 2 L34 15 L46 6 L44 24 Z" fill="url(#crown-g)" />
+      <rect x="4" y="25" width="40" height="3" rx="1" fill="url(#crown-g)" />
+      <circle cx="2" cy="5" r="2" fill="#f7dc8f" />
+      <circle cx="24" cy="2" r="2" fill="#f7dc8f" />
+      <circle cx="46" cy="5" r="2" fill="#f7dc8f" />
+    </svg>
+  );
+}
+
+export function Logo({ className, crown }: { className?: string; crown?: boolean }) {
+  return (
+    <span className={cn("inline-flex flex-col items-center leading-none", className)}>
+      {crown && <Crown className="mb-[0.18em] h-[0.42em] w-[0.72em]" />}
+      <span className="gold-text font-brand font-semibold tracking-[0.06em]">PRIVÉ</span>
     </span>
   );
 }

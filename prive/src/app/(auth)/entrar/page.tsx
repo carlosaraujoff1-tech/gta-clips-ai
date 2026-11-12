@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
-import { Logo } from "@/components/art";
-import { Button, Field, Input, Notice } from "@/components/ui";
+import { Art, Logo } from "@/components/art";
+import { Button, Field, Input, LinkButton, Notice, TopBar } from "@/components/ui";
+import { ChevronRight } from "lucide-react";
 import { DEMO_MODE } from "@/lib/config";
 import { AppError, currentUser, signIn, useDB } from "@/lib/db";
 import { HOME_BY_ROLE } from "@/lib/routes";
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
+  const [step, setStep] = useState<"welcome" | "form">("welcome");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -50,13 +52,49 @@ export default function LoginPage() {
     }
   }
 
+  if (step === "welcome") {
+    return (
+      <div className="-mx-6 flex min-h-dvh flex-col">
+        <div className="relative flex-1">
+          <Art hue={30} label="P" className="absolute inset-0 rounded-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/10 to-black" />
+          <div className="relative flex flex-col items-center px-6 pt-20 text-center animate-rise">
+            <Logo crown className="text-[64px]" />
+            <p className="mt-3 text-[15px] leading-snug text-ink">
+              Encontros exclusivos,
+              <br />
+              com total discrição.
+            </p>
+          </div>
+          <div className="absolute inset-x-0 bottom-4 flex justify-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-ink" />
+            <span className="h-1.5 w-1.5 rounded-full bg-ink-3" />
+            <span className="h-1.5 w-1.5 rounded-full bg-ink-3" />
+          </div>
+        </div>
+        <div className="safe-bottom space-y-3 bg-black px-6 pt-4 animate-rise [animation-delay:120ms]">
+          <Button className="w-full" onClick={() => setStep("form")}>
+            Entrar
+          </Button>
+          <LinkButton href="/cadastro" variant="outline" className="w-full">
+            Criar conta
+          </LinkButton>
+          <Link href="/cadastro?tipo=professional" className="flex items-center justify-center gap-1 py-2 text-sm text-ink">
+            Entrar como profissional <ChevronRight className="size-4" />
+          </Link>
+          <p className="pb-2 text-center text-[11px] text-ink-3">Exclusivo para maiores de 18 anos.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="pt-16 pb-10 text-center animate-rise">
-        <Logo className="text-4xl" />
+      <TopBar back={undefined} right={<button onClick={() => setStep("welcome")} className="text-sm text-ink-3">Voltar</button>} />
+      <div className="pt-6 pb-8 text-center animate-rise">
+        <Logo crown className="text-5xl" />
         <p className="mt-4 text-sm text-ink-3">Bem-vindo de volta.</p>
       </div>
-
       <form onSubmit={submit} className="space-y-4 animate-rise [animation-delay:80ms]">
         <Field label="E-mail">
           <Input type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" required />

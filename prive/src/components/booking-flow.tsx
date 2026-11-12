@@ -101,7 +101,7 @@ export function BookingFlow({ db, professional, establishment }: { db: DB; profe
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder={establishment ? "Ex.: mesa para dois, aniversário" : "Ex.: jantar de negócios"} />
           </Field>
           <label className="flex items-start gap-3 text-[13px] text-ink-2">
-            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[#c9a961]" />
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[#e0ad3e]" />
             Entendo que esta é uma solicitação de disponibilidade, sujeita à aceitação livre de {name}, que pode recusar ou cancelar a qualquer momento.
           </label>
           {!FEATURES.payments && <Notice tone="mute">Nenhum pagamento é processado pelo PRIVÉ nesta versão.</Notice>}

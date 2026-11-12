@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { CalendarCheck2, Camera, CheckCircle2, Clock, Eye, FileCheck2, ImagePlus, Inbox, Plus, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
@@ -8,8 +9,8 @@ import { Art, Avatar } from "@/components/art";
 import { useSession } from "@/components/guard";
 import { Requests, WeeklyEditor } from "@/components/owner";
 import { Badge, Button, Card, Chip, Empty, Field, Input, Notice, Select, Spinner, Textarea, TopBar, cn } from "@/components/ui";
-import { CATEGORIES, CITIES, FEATURES } from "@/lib/config";
-import { AppError, addPhoto, bookingsForOwner, myProfessional, ratingOf, removePhoto, submitVerification, updateMyProfessional } from "@/lib/db";
+import { CATEGORIES, CITIES, FEATURES, KINDS, SERVICE_LOCATIONS, TAGS } from "@/lib/config";
+import { AppError, addPhoto, isPremium, bookingsForOwner, myProfessional, ratingOf, removePhoto, submitVerification, updateMyProfessional } from "@/lib/db";
 import { isoDate } from "@/lib/format";
 import type { DB, Professional, User, WeeklySlot } from "@/lib/types";
 
@@ -97,7 +98,7 @@ function Overview({ db, me, p, go }: { db: DB; me: User; p: Professional; go: (t
       <div className="flex items-center gap-4">
         <Avatar hue={p.hue} name={p.displayName} size={60} />
         <div>
-          <p className="font-display text-2xl">{p.displayName}</p>
+          <p className="text-xl font-bold">{p.displayName}</p>
           <p className="text-xs text-ink-3">
             {p.region}, {p.city}
           </p>
@@ -112,7 +113,7 @@ function Overview({ db, me, p, go }: { db: DB; me: User; p: Professional; go: (t
         ].map((k) => (
           <Card key={k.label} className="p-3">
             <k.icon className="size-4 text-gold" strokeWidth={1.5} />
-            <p className="font-display mt-2 text-3xl leading-none">{k.value}</p>
+            <p className="mt-2 text-2xl font-bold leading-none">{k.value}</p>
             <p className="mt-1 text-[11px] text-ink-3">{k.label}</p>
           </Card>
         ))}
@@ -127,6 +128,13 @@ function Overview({ db, me, p, go }: { db: DB; me: User; p: Professional; go: (t
           ))}
         </Card>
       )}
+      <Link href="/planos" className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-gold-2 to-gold px-4 py-3.5 text-black">
+        <span>
+          <span className="block text-[15px] font-bold">{isPremium(me) ? "Perfil Premium ativo" : "Destaque seu perfil"}</span>
+          <span className="text-xs">{isPremium(me) ? `até ${new Date(me.planUntil!).toLocaleDateString("pt-BR")}` : "Apareça primeiro na busca da sua cidade"}</span>
+        </span>
+        <span className="rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-gold">{isPremium(me) ? "Gerenciar" : "Ver planos"}</span>
+      </Link>
       {pending.length > 0 && (
         <Button variant="outline" className="w-full" onClick={() => go("solicitacoes")}>
           Responder {pending.length} {pending.length === 1 ? "solicitação" : "solicitações"}
@@ -185,6 +193,9 @@ function ProfileEditor({ p }: { p: Professional }) {
     city: p.city,
     region: p.region,
     categories: p.categories,
+    kind: p.kind,
+    tags: p.tags,
+    serviceLocations: p.serviceLocations,
     languages: p.languages.join(", "),
     priceFrom: p.priceFrom ? String(p.priceFrom) : "",
   });
@@ -200,6 +211,9 @@ function ProfileEditor({ p }: { p: Professional }) {
         city: f.city,
         region: f.region,
         categories: f.categories,
+        kind: f.kind,
+        tags: f.tags,
+        serviceLocations: f.serviceLocations.length ? f.serviceLocations : ["A combinar"],
         languages: f.languages.split(",").map((x) => x.trim()).filter(Boolean),
         priceFrom: f.priceFrom ? Number(f.priceFrom) : null,
       });
@@ -272,6 +286,40 @@ function ProfileEditor({ p }: { p: Professional }) {
           ))}
         </div>
       </div>
+      <div>
+        <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-ink-3 uppercase">Tipo de perfil</p>
+        <div className="flex flex-wrap gap-2">
+          {KINDS.map((k) => (
+            <Chip key={k} active={f.kind === k} onClick={() => setF({ ...f, kind: k })}>
+              {k}
+            </Chip>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-ink-3 uppercase">Etiquetas</p>
+        <div className="flex flex-wrap gap-2">
+          {TAGS.map((t) => (
+            <Chip key={t} active={f.tags.includes(t)} onClick={() => setF({ ...f, tags: f.tags.includes(t) ? f.tags.filter((x) => x !== t) : [...f.tags, t].slice(0, 4) })}>
+              {t}
+            </Chip>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-ink-3 uppercase">Local de atendimento</p>
+        <div className="flex flex-wrap gap-2">
+          {SERVICE_LOCATIONS.map((l) => (
+            <Chip
+              key={l}
+              active={f.serviceLocations.includes(l)}
+              onClick={() => setF({ ...f, serviceLocations: f.serviceLocations.includes(l) ? f.serviceLocations.filter((x) => x !== l) : [...f.serviceLocations, l] })}
+            >
+              {l}
+            </Chip>
+          ))}
+        </div>
+      </div>
       <Field label="Idiomas" hint="Separados por vírgula">
         <Input value={f.languages} onChange={(e) => setF({ ...f, languages: e.target.value })} />
       </Field>
@@ -339,7 +387,7 @@ function VerificationForm({ db, p }: { db: DB; p: Professional }) {
       <FileBox label="Documento (frente e verso)" value={doc} onPick={setDoc} icon={FileCheck2} />
       <FileBox label="Selfie segurando o documento" value={selfie} onPick={setSelfie} icon={Camera} capture />
       <label className="flex items-start gap-3 text-[13px] text-ink-2">
-        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[#c9a961]" />
+        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[#e0ad3e]" />
         Declaro que tenho 18 anos ou mais, que atuo de forma independente e por livre vontade, sem intermediários, e autorizo o tratamento destes dados para verificação (LGPD, art. 11).
       </label>
       {error && <Notice tone="bad">{error}</Notice>}

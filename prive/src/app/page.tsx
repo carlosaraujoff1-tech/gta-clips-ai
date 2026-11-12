@@ -31,7 +31,7 @@ function SplashInner() {
     <main className="grid min-h-dvh place-items-center bg-void">
       <div className="text-center">
         <div className="animate-[fade_1.2s_ease_both]">
-          <Logo className="text-5xl" />
+          <Logo crown className="text-6xl" />
         </div>
         <div className="hairline mx-auto mt-6 w-0 animate-[grow_1.4s_0.3s_cubic-bezier(.2,.7,.2,1)_forwards]" />
         <p className="mt-5 text-[10px] tracking-[0.5em] text-ink-3 uppercase animate-[fade_1s_0.7s_ease_both]">Discrição · Confiança · Exclusividade</p>

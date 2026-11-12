@@ -138,7 +138,7 @@ function Admin({ db, me }: { db: DB; me: User }) {
 
       <main className="w-full px-5 py-6 lg:ml-64 lg:px-10 lg:py-10">
         <div className="mx-auto max-w-5xl">
-          <h1 className="font-display mb-6 text-4xl">{SECTIONS.find((s) => s.id === section)!.label}</h1>
+          <h1 className="font-display mb-6 text-3xl">{SECTIONS.find((s) => s.id === section)!.label}</h1>
           {error && (
             <div className="mb-4">
               <Notice tone="bad">{error}</Notice>
@@ -166,7 +166,7 @@ function Kpi({ label, value, hint, tone }: { label: string; value: number | stri
   return (
     <Card className="p-5">
       <p className="text-[11px] tracking-[0.18em] text-ink-3 uppercase">{label}</p>
-      <p className={cn("font-display mt-2 text-4xl leading-none", tone === "bad" && "text-bad")}>{value}</p>
+      <p className={cn("font-display mt-2 text-3xl leading-none", tone === "bad" && "text-bad")}>{value}</p>
       {hint && <p className="mt-1 text-xs text-ink-3">{hint}</p>}
     </Card>
   );

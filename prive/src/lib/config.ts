@@ -3,7 +3,10 @@
  * validação jurídica e aprovação expressa dos fornecedores (ver docs/ARQUITETURA.md §8).
  */
 export const FEATURES = {
+  /** Pagamento de encontros/reservas: proibido (intermediação). Nunca ligar. */
   payments: false,
+  /** Cobrança de planos/destaques. Em demonstração o checkout é simulado. */
+  subscriptions: true,
   commissions: false,
   /** Faixa de preço apenas informativa (sem transação na plataforma). */
   priceInfo: true,
@@ -23,6 +26,42 @@ export const CATEGORIES = [
   "Vida noturna",
   "Conversa",
 ] as const;
+
+export const KINDS = ["Mulheres", "Homens", "Casais"] as const;
+
+export const TAGS = ["Discreta", "Discreto", "Atendimento VIP", "Bilíngue", "Pontual", "Eventos", "Viagens"] as const;
+
+/** Onde o perfil atende: informação declarada pelo próprio perfil, sem intermediação de local. */
+export const SERVICE_LOCATIONS = ["Local próprio", "Hotel (reservado pelo cliente)", "A combinar"] as const;
+
+/**
+ * Planos pagos: a receita vem de assinatura/visibilidade, nunca de encontros.
+ * (ver docs/ARQUITETURA.md §7)
+ */
+export const PLANS = {
+  "cliente-premium": {
+    audience: "client",
+    name: "Cliente Premium",
+    price: 39.9,
+    period: "mês",
+    perks: ["Filtros avançados e favoritos ilimitados", "Selo Cliente Premium", "Modo discreto completo", "Suporte prioritário"],
+  },
+  "pro-premium": {
+    audience: "professional",
+    name: "Perfil Premium",
+    price: 99,
+    period: "mês",
+    perks: ["Até 10 fotos", "Melhor posição na busca", "Estatísticas de visitas", "Selo Premium no card"],
+  },
+  "pro-destaque-7d": {
+    audience: "professional",
+    name: "Destaque 7 dias",
+    price: 49.9,
+    period: "7 dias",
+    perks: ["Topo da busca na sua cidade", "Aparece em “Em destaque” na página inicial"],
+  },
+} as const;
+export type PlanId = keyof typeof PLANS;
 
 export const CITIES: Record<string, string[]> = {
   "São Paulo": ["Jardins", "Itaim Bibi", "Moema", "Vila Olímpia", "Pinheiros"],

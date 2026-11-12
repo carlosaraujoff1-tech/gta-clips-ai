@@ -56,7 +56,7 @@ export default function PartnerPage() {
                   </Art>
                   <div className="p-4">
                     <p className="text-[10px] tracking-[0.25em] text-gold uppercase">{e.kind}</p>
-                    <p className="font-display text-2xl">{e.name}</p>
+                    <p className="font-display text-xl">{e.name}</p>
                     <p className="text-xs text-ink-3">{e.address}</p>
                     <p className="mt-2 text-xs text-ink-3">
                       {e.photos.length} fotos · {s.db.bookings.filter((b) => b.establishmentId === e.id && b.status === "requested").length} solicitações pendentes

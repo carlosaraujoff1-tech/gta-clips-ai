@@ -90,7 +90,7 @@ export function ReportSheet({
           </Field>
           {blockUserId && (
             <label className="flex items-center gap-3 text-sm text-ink-2">
-              <input type="checkbox" checked={alsoBlock} onChange={(e) => setAlsoBlock(e.target.checked)} className="size-4 accent-[#c9a961]" />
+              <input type="checkbox" checked={alsoBlock} onChange={(e) => setAlsoBlock(e.target.checked)} className="size-4 accent-[#e0ad3e]" />
               Também bloquear {name}
             </label>
           )}

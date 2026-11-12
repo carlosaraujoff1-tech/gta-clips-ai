@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, MapPin, Star } from "lucide-react";
+import { ArrowRight, Heart, MapPin, Star } from "lucide-react";
 
 import { Art } from "./art";
-import { VerifiedSeal, cn } from "./ui";
+import { CheckDot, cn } from "./ui";
 import { FEATURES } from "@/lib/config";
 import { ratingOf, toggleFavorite } from "@/lib/db";
 import { brl } from "@/lib/format";
@@ -19,39 +19,57 @@ export function FavButton({ active, id, className }: { active: boolean; id: stri
         e.stopPropagation();
         toggleFavorite(id);
       }}
-      className={cn("grid size-9 place-items-center rounded-full bg-black/40 backdrop-blur-md transition active:scale-90", className)}
+      className={cn("grid size-9 place-items-center rounded-full transition active:scale-90", className)}
     >
-      <Heart className={cn("size-4", active ? "fill-gold text-gold" : "text-ink")} strokeWidth={1.6} />
+      <Heart className={cn("size-6 drop-shadow", active ? "fill-gold text-gold" : "text-white")} strokeWidth={1.8} />
     </button>
   );
+}
+
+/** Distância ilustrativa (no Supabase vem de PostGIS a partir da localização autorizada). */
+export function distanceKm(id: string) {
+  let h = 0;
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 997;
+  return 1 + (h % 9);
 }
 
 export function ProfileCard({ db, p, fav, wide, index = 0 }: { db: DB; p: Professional; fav: boolean; wide?: boolean; index?: number }) {
   const { avg, count } = ratingOf(db, p.id);
   return (
-    <Link href={`/perfil/${p.id}`} className={cn("group block animate-rise", wide ? "w-64 shrink-0" : "")} style={{ animationDelay: `${index * 50}ms` }}>
-      <Art hue={p.hue} label={p.displayName} className={cn("transition duration-500 group-hover:scale-[1.01]", wide ? "aspect-[4/5]" : "aspect-[3/4]")}>
-        <FavButton active={fav} id={p.id} className="absolute top-3 right-3" />
-        <div className="absolute inset-x-0 bottom-0 p-3.5">
-          <div className="flex items-center gap-1.5">
-            <span className="font-display text-[22px] leading-none">{p.displayName}</span>
-            <VerifiedSeal compact />
-          </div>
-          <p className="mt-1 line-clamp-1 text-xs text-ink-2">{p.headline}</p>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-ink-3">
-            <span className="flex items-center gap-1">
-              <MapPin className="size-3" /> {p.region}
-            </span>
-            {count > 0 ? (
-              <span className="flex items-center gap-1 text-gold-2">
-                <Star className="size-3 fill-gold text-gold" /> {avg.toFixed(1)}
-              </span>
-            ) : (
-              FEATURES.priceInfo && p.priceFrom && <span>a partir de {brl(p.priceFrom)}</span>
-            )}
-          </div>
+    <Link
+      href={`/perfil/${p.id}`}
+      className={cn("group block overflow-hidden rounded-2xl border border-line bg-card animate-rise", wide && "w-60 shrink-0")}
+      style={{ animationDelay: `${index * 50}ms` }}
+    >
+      <Art hue={p.hue} label={p.displayName} className="aspect-[4/5] rounded-none rounded-t-2xl">
+        <FavButton active={fav} id={p.id} className="absolute top-1.5 left-1.5" />
+        <CheckDot className="absolute top-2.5 right-2.5" />
+        <div className="absolute inset-x-0 bottom-0 px-3 pb-2">
+          <p className="truncate text-[17px] font-bold">{p.displayName}</p>
+          {count > 0 && (
+            <p className="flex items-center gap-1 text-[13px]">
+              <Star className="size-3.5 fill-gold text-gold" />
+              <span className="text-gold">{avg.toFixed(1)}</span>
+              <span className="text-ink-2">({count})</span>
+            </p>
+          )}
         </div>
       </Art>
+      <div className="space-y-1.5 px-3 pt-2 pb-3">
+        {FEATURES.priceInfo && p.priceFrom ? (
+          <p className="text-[13px] text-ink-2">
+            A partir de <span className="font-bold text-ink">{brl(p.priceFrom)}</span>
+          </p>
+        ) : (
+          <p className="truncate text-[13px] text-ink-2">{p.headline}</p>
+        )}
+        <p className="flex items-center gap-1 text-[12px] text-ink-2">
+          <MapPin className="size-3.5 text-gold" /> {p.region} • {distanceKm(p.id)} km
+        </p>
+        <span className="mt-1 flex h-9 items-center justify-center gap-1 rounded-lg bg-gradient-to-b from-gold-2 to-gold text-[13px] font-semibold text-black">
+          Ver perfil <ArrowRight className="size-4" />
+        </span>
+      </div>
     </Link>
   );
 }

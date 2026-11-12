@@ -24,7 +24,7 @@ export default function EstablishmentsPage() {
               <Art hue={e.hue} label={e.name} className="aspect-[16/9]">
                 <div className="absolute inset-x-0 bottom-0 p-4">
                   <p className="text-[10px] tracking-[0.25em] text-gold uppercase">{e.kind}</p>
-                  <p className="font-display text-2xl">{e.name}</p>
+                  <p className="font-display text-xl">{e.name}</p>
                   <p className="flex items-center gap-1 text-xs text-ink-3">
                     <MapPin className="size-3" /> {e.region}, {e.city}
                   </p>

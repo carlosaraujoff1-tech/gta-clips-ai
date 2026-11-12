@@ -21,7 +21,7 @@ export function Calendar({ value, onChange, isAvailable }: { value: string; onCh
         <button aria-label="Mês anterior" disabled={!canPrev} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="grid size-9 place-items-center rounded-full text-ink-2 hover:bg-card-2 disabled:opacity-30">
           <ChevronLeft className="size-4" />
         </button>
-        <span className="font-display text-xl capitalize">
+        <span className="text-lg font-semibold capitalize">
           {MONTHS[cursor.getMonth()]} {cursor.getFullYear()}
         </span>
         <button aria-label="Próximo mês" disabled={cursor >= maxMonth} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="grid size-9 place-items-center rounded-full text-ink-2 hover:bg-card-2 disabled:opacity-30">

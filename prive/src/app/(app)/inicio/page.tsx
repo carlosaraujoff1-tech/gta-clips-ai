@@ -3,54 +3,54 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Bell, ChevronDown, MapPin, Search, SlidersHorizontal } from "lucide-react";
+import { Bell, ChevronDown, MapPin, MessageCircle, Search } from "lucide-react";
 
-import { Art, Logo } from "@/components/art";
+import { Art } from "@/components/art";
 import { CitySheet } from "@/components/city-sheet";
 import { useSession } from "@/components/guard";
 import { ProfileCard } from "@/components/profile-card";
 import { Chip, Empty, SectionTitle, Spinner } from "@/components/ui";
-import { CATEGORIES } from "@/lib/config";
-import { searchProfessionals } from "@/lib/db";
+import { KINDS } from "@/lib/config";
+import { isPremium, searchProfessionals } from "@/lib/db";
 import { usePref } from "@/lib/prefs";
+
+const UF: Record<string, string> = { "São Paulo": "SP", "Rio de Janeiro": "RJ", "Belo Horizonte": "MG", Curitiba: "PR" };
 
 export default function HomePage() {
   const s = useSession(["client"]);
   const router = useRouter();
   const [city, setCity] = usePref("city", "São Paulo");
-  const [cat, setCat] = useState("");
+  const [kind, setKind] = useState("");
   const [cityOpen, setCityOpen] = useState(false);
   if (!s) return <Spinner />;
   const { db, me } = s;
 
   const favs = new Set(db.favorites.filter((f) => f.userId === me.id).map((f) => f.professionalId));
-  const list = searchProfessionals(db, { city, category: cat || undefined }, me.id);
-  const featured = searchProfessionals(db, { city }, me.id).slice(0, 5);
-  const today = new Date().getDay();
-  const availableToday = list.filter((p) => p.availability.some((a) => a.weekday === today));
+  const list = searchProfessionals(db, { city, kind: kind || undefined }, me.id);
+  // Perfis com plano de destaque aparecem primeiro (receita por visibilidade).
+  const proUserPremium = (uid: string) => isPremium(db.users.find((u) => u.id === uid) ?? null);
+  const sorted = [...list].sort((a, b) => Number(proUserPremium(b.userId)) - Number(proUserPremium(a.userId)));
   const unread = db.notifications.filter((n) => n.userId === me.id && !n.read).length;
-  const partners = db.establishments.filter((e) => e.status === "approved");
+  const partners = db.establishments.filter((e) => e.status === "approved" && e.city === city);
 
   return (
     <div className="safe-top">
-      <header className="flex items-center justify-between pt-4 pb-5">
-        <button onClick={() => setCityOpen(true)} className="text-left">
-          <span className="block text-[10px] tracking-[0.25em] text-ink-3 uppercase">Localização</span>
-          <span className="flex items-center gap-1 text-[15px]">
-            <MapPin className="size-4 text-gold" strokeWidth={1.6} /> {city} <ChevronDown className="size-4 text-ink-3" />
-          </span>
+      <header className="flex items-center justify-between pt-3 pb-4">
+        <button onClick={() => setCityOpen(true)} className="flex items-center gap-1.5 text-[15px] font-medium">
+          <MapPin className="size-5 fill-gold text-black" strokeWidth={1.5} />
+          {city} - {UF[city] ?? ""}
+          <ChevronDown className="size-4" />
         </button>
-        <Logo className="text-xl" />
-        <Link href="/notificacoes" aria-label="Notificações" className="relative grid size-10 place-items-center rounded-full border border-line">
-          <Bell className="size-[18px]" strokeWidth={1.5} />
-          {unread > 0 && <span className="absolute top-2 right-2.5 size-2 rounded-full bg-gold" />}
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link href="/mensagens" aria-label="Mensagens" className="grid size-10 place-items-center">
+            <MessageCircle className="size-[22px]" strokeWidth={1.6} />
+          </Link>
+          <Link href="/notificacoes" aria-label="Notificações" className="relative grid size-10 place-items-center">
+            <Bell className="size-[22px]" strokeWidth={1.6} />
+            {unread > 0 && <span className="absolute top-2 right-2.5 size-2 rounded-full bg-gold" />}
+          </Link>
+        </div>
       </header>
-
-      <h1 className="font-display text-[34px] leading-[1.05] animate-rise">
-        {greeting()}, <span className="gold-text italic">{me.name.split(" ")[0]}</span>
-      </h1>
-      <p className="mt-1 text-sm text-ink-3">Perfis verificados, com total discrição.</p>
 
       <form
         onSubmit={(e) => {
@@ -58,56 +58,30 @@ export default function HomePage() {
           const q = new FormData(e.currentTarget).get("q");
           router.push(`/buscar?q=${encodeURIComponent(String(q ?? ""))}`);
         }}
-        className="mt-5 flex gap-2"
       >
-        <label className="flex h-12 flex-1 items-center gap-3 rounded-2xl border border-line bg-card px-4 focus-within:border-gold-3">
-          <Search className="size-4 text-ink-3" />
-          <input name="q" placeholder="Nome, bairro ou experiência" className="w-full bg-transparent text-[15px] outline-none placeholder:text-ink-3" />
+        <label className="flex h-11 items-center gap-3 rounded-full bg-card-2 px-4 focus-within:ring-1 focus-within:ring-gold-3">
+          <Search className="size-[18px] text-ink-2" />
+          <input name="q" placeholder="Buscar por nome, região..." className="w-full bg-transparent text-[15px] outline-none placeholder:text-ink-3" />
         </label>
-        <Link href="/buscar" aria-label="Filtros" className="grid size-12 place-items-center rounded-2xl border border-line bg-card text-gold">
-          <SlidersHorizontal className="size-[18px]" strokeWidth={1.5} />
-        </Link>
       </form>
 
-      <div className="no-scrollbar -mx-5 mt-5 flex gap-2 overflow-x-auto px-5">
-        <Chip active={!cat} onClick={() => setCat("")}>
+      <div className="no-scrollbar -mx-5 mt-4 flex gap-2 overflow-x-auto px-5">
+        <Chip active={!kind} onClick={() => setKind("")}>
           Todos
         </Chip>
-        {CATEGORIES.map((c) => (
-          <Chip key={c} active={cat === c} onClick={() => setCat(cat === c ? "" : c)}>
-            {c}
+        {KINDS.map((k) => (
+          <Chip key={k} active={kind === k} onClick={() => setKind(kind === k ? "" : k)}>
+            {k}
           </Chip>
         ))}
       </div>
 
-      {!cat && featured.length > 0 && (
-        <section className="mt-8">
-          <SectionTitle>Em destaque</SectionTitle>
-          <div className="no-scrollbar -mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-1">
-            {featured.map((p, i) => (
-              <div key={p.id} className="snap-start">
-                <ProfileCard db={db} p={p} fav={favs.has(p.id)} wide index={i} />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="mt-8">
-        <SectionTitle
-          action={
-            <Link href="/buscar" className="text-xs text-gold">
-              Ver todos
-            </Link>
-          }
-        >
-          {cat || "Disponíveis hoje"}
-        </SectionTitle>
-        {(cat ? list : availableToday).length === 0 ? (
+      <section className="mt-4">
+        {sorted.length === 0 ? (
           <Empty icon={<Search className="size-5" />} title="Nenhum perfil por aqui" text="Experimente outra cidade ou categoria." />
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {(cat ? list : availableToday).map((p, i) => (
+            {sorted.map((p, i) => (
               <ProfileCard key={p.id} db={db} p={p} fav={favs.has(p.id)} index={i} />
             ))}
           </div>
@@ -115,10 +89,10 @@ export default function HomePage() {
       </section>
 
       {partners.length > 0 && (
-        <section className="mt-10">
+        <section className="mt-8">
           <SectionTitle
             action={
-              <Link href="/estabelecimentos" className="text-xs text-gold">
+              <Link href="/estabelecimentos" className="text-sm text-gold">
                 Ver todos
               </Link>
             }
@@ -128,13 +102,11 @@ export default function HomePage() {
           <div className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5">
             {partners.map((e) => (
               <Link key={e.id} href={`/estabelecimentos/${e.id}`} className="w-60 shrink-0">
-                <Art hue={e.hue} label={e.name} className="aspect-[16/10]">
+                <Art hue={e.hue} label={e.name} className="aspect-[16/10] rounded-2xl">
                   <div className="absolute inset-x-0 bottom-0 p-3">
-                    <p className="text-[10px] tracking-[0.2em] text-gold uppercase">{e.kind}</p>
-                    <p className="font-display text-xl">{e.name}</p>
-                    <p className="text-[11px] text-ink-3">
-                      {e.region}, {e.city}
-                    </p>
+                    <p className="text-[11px] text-gold">{e.kind}</p>
+                    <p className="font-bold">{e.name}</p>
+                    <p className="text-xs text-ink-2">{e.region}</p>
                   </div>
                 </Art>
               </Link>
@@ -143,12 +115,17 @@ export default function HomePage() {
         </section>
       )}
 
+      {!isPremium(me) && (
+        <Link href="/planos" className="mt-8 flex items-center justify-between rounded-2xl bg-gradient-to-r from-gold-2 to-gold px-4 py-3.5 text-black">
+          <span>
+            <span className="block text-[15px] font-bold">Seja Cliente Premium</span>
+            <span className="text-xs">Filtros avançados, selo e suporte prioritário</span>
+          </span>
+          <span className="rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-gold">Conhecer</span>
+        </Link>
+      )}
+
       <CitySheet open={cityOpen} onClose={() => setCityOpen(false)} value={city} onChange={setCity} />
     </div>
   );
-}
-
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
 }
