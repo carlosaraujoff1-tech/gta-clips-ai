@@ -62,8 +62,8 @@ export default function BookingsPage() {
                 <div className="flex items-start gap-3">
                   <Avatar hue={pro?.hue ?? est?.hue ?? 40} name={bookingTitle(db, b)} src={pro ? coverOf(pro) : undefined} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <Link href={href} className="font-display truncate text-lg">
+                    <div className="flex flex-col items-start gap-1.5">
+                      <Link href={href} className="font-display max-w-full truncate text-lg">
                         {bookingTitle(db, b)}
                       </Link>
                       <BookingStatusBadge status={b.status} />
