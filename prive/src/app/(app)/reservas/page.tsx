@@ -8,7 +8,7 @@ import { Avatar } from "@/components/art";
 import { BookingStatusBadge } from "@/components/booking-status";
 import { useSession } from "@/components/guard";
 import { Button, Chip, Empty, Field, LinkButton, Notice, Sheet, Spinner, Textarea, TopBar, cn } from "@/components/ui";
-import { AppError, addReview, bookingTitle, canReview, setBookingStatus } from "@/lib/db";
+import { AppError, addReview, coverOf, bookingTitle, canReview, setBookingStatus } from "@/lib/db";
 import { isoDate, longDate } from "@/lib/format";
 
 export default function BookingsPage() {
@@ -60,7 +60,7 @@ export default function BookingsPage() {
             return (
               <li key={b.id} className="rounded-3xl border border-line bg-card p-4 animate-rise" style={{ animationDelay: `${i * 40}ms` }}>
                 <div className="flex items-start gap-3">
-                  <Avatar hue={pro?.hue ?? est?.hue ?? 40} name={bookingTitle(db, b)} />
+                  <Avatar hue={pro?.hue ?? est?.hue ?? 40} name={bookingTitle(db, b)} src={pro ? coverOf(pro) : undefined} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <Link href={href} className="font-display truncate text-lg">

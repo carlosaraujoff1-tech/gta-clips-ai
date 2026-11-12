@@ -9,7 +9,7 @@ import { useSession } from "@/components/guard";
 import { FavButton, distanceKm } from "@/components/profile-card";
 import { ReportSheet } from "@/components/report-sheet";
 import { Button, Empty, Sheet, Spinner, Stars, TopBar, VerifiedSeal, cn } from "@/components/ui";
-import { FEATURES } from "@/lib/config";
+import { DEMO_MODE, FEATURES } from "@/lib/config";
 import { AppError, blockUser, isBlockedBetween, openConversation, ratingOf, userName } from "@/lib/db";
 import { WEEKDAYS, brl, relative } from "@/lib/format";
 
@@ -54,7 +54,7 @@ export default function ProfilePage() {
       <div className="relative">
         <div className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto" onScroll={(e) => setPhoto(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}>
           {photos.map((ph) => (
-            <Art key={ph.id} hue={ph.hue} label={p.displayName} className="aspect-[4/4.2] w-full shrink-0 snap-center rounded-none" />
+            <Art key={ph.id} hue={ph.hue} src={ph.src} label={p.displayName} className="aspect-[4/4.2] w-full shrink-0 snap-center rounded-none" />
           ))}
         </div>
         <div className="safe-top absolute inset-x-0 top-0 flex h-14 items-center justify-between px-3">
@@ -75,6 +75,7 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+        {DEMO_MODE && <span className="absolute bottom-4 left-4 text-[10px] text-white/50">Foto ilustrativa · demonstração</span>}
         <span className="absolute right-4 bottom-4 rounded-full bg-black/60 px-2.5 py-1 text-xs backdrop-blur">
           {photo + 1}/{photos.length}
         </span>

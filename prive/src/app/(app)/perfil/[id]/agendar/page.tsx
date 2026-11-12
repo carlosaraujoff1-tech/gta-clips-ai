@@ -9,7 +9,7 @@ import { Art } from "@/components/art";
 import { useSession } from "@/components/guard";
 import { Button, Empty, LinkButton, Notice, Sheet, Spinner, Textarea, TopBar, cn } from "@/components/ui";
 import { FEATURES } from "@/lib/config";
-import { AppError, ratingOf, requestBooking, slotsFor } from "@/lib/db";
+import { AppError, coverOf, ratingOf, requestBooking, slotsFor } from "@/lib/db";
 import { brl, isoDate, longDate, shortDate } from "@/lib/format";
 
 const DURATIONS = [
@@ -92,7 +92,7 @@ export default function ReservePage() {
       <TopBar back title="Reserva" />
 
       <Link href={`/perfil/${p.id}`} className="mb-6 flex items-center gap-4">
-        <Art hue={p.hue} label={p.displayName} className="size-20 shrink-0 rounded-2xl" />
+        <Art hue={p.hue} label={p.displayName} src={coverOf(p)} className="size-20 shrink-0 rounded-2xl" />
         <div>
           <p className="text-lg font-bold">{p.displayName}</p>
           {count > 0 && (

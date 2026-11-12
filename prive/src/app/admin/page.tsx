@@ -25,6 +25,7 @@ import { Guard } from "@/components/guard";
 import { Badge, Button, Card, Empty, Input, Notice, cn } from "@/components/ui";
 import {
   AppError,
+  coverOf,
   hasPermission,
   reviewVerification,
   setEstablishmentStatus,
@@ -216,7 +217,7 @@ function Verifications({ db, run }: P) {
         return (
           <Card key={v.id} className="p-5">
             <div className="flex flex-wrap items-center gap-3">
-              <Avatar hue={p?.hue ?? 0} name={p?.displayName ?? "?"} />
+              <Avatar hue={p?.hue ?? 0} name={p?.displayName ?? "?"} src={p ? coverOf(p, true) : undefined} />
               <div className="flex-1">
                 <p className="text-[15px]">
                   {p?.displayName} <span className="text-ink-3">· {v.legalName}</span>
@@ -236,7 +237,7 @@ function Verifications({ db, run }: P) {
                   <span className="mt-1 block text-[10px]">URL assinada · expira em 5 min</span>
                 </div>
               ))}
-              {p?.photos.slice(0, 2).map((ph) => <Art key={ph.id} hue={ph.hue} label={p.displayName} className="aspect-square rounded-2xl" />)}
+              {p?.photos.slice(0, 2).map((ph) => <Art key={ph.id} hue={ph.hue} src={ph.src} label={p.displayName} className="aspect-square rounded-2xl" />)}
             </div>
             <ul className="mt-4 space-y-1 text-xs text-ink-3">
               <li>☐ Foto do documento confere com a selfie e com as fotos do perfil</li>
@@ -355,7 +356,7 @@ function Moderation({ db, run }: P) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {items.map(({ p, ph }) => (
               <Card key={ph.id} className="overflow-hidden">
-                <Art hue={ph.hue} label={p.displayName} className="aspect-[3/4] rounded-none" />
+                <Art hue={ph.hue} src={ph.src} label={p.displayName} className="aspect-[3/4] rounded-none" />
                 <div className="p-3">
                   <p className="text-sm">{p.displayName}</p>
                   <p className="text-xs text-ink-3">{ph.caption}</p>
@@ -432,7 +433,7 @@ function Profiles({ db, run }: P) {
     <div className="grid gap-3 sm:grid-cols-2">
       {db.professionals.map((p) => (
         <Card key={p.id} className="flex items-center gap-3 p-4">
-          <Avatar hue={p.hue} name={p.displayName} />
+          <Avatar hue={p.hue} name={p.displayName} src={coverOf(p, true)} />
           <div className="min-w-0 flex-1">
             <p className="text-sm">{p.displayName}</p>
             <p className="truncate text-xs text-ink-3">

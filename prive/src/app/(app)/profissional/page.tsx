@@ -10,7 +10,7 @@ import { useSession } from "@/components/guard";
 import { Requests, WeeklyEditor } from "@/components/owner";
 import { Badge, Button, Card, Chip, Empty, Field, Input, Notice, Select, Spinner, Textarea, TopBar, cn } from "@/components/ui";
 import { CATEGORIES, CITIES, FEATURES, KINDS, SERVICE_LOCATIONS, TAGS } from "@/lib/config";
-import { AppError, addPhoto, isPremium, bookingsForOwner, myProfessional, ratingOf, removePhoto, submitVerification, updateMyProfessional } from "@/lib/db";
+import { AppError, addPhoto, coverOf, isPremium, bookingsForOwner, myProfessional, ratingOf, removePhoto, submitVerification, updateMyProfessional } from "@/lib/db";
 import { isoDate } from "@/lib/format";
 import type { DB, Professional, User, WeeklySlot } from "@/lib/types";
 
@@ -96,7 +96,7 @@ function Overview({ db, me, p, go }: { db: DB; me: User; p: Professional; go: (t
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-4">
-        <Avatar hue={p.hue} name={p.displayName} size={60} />
+        <Avatar hue={p.hue} name={p.displayName} size={60} src={coverOf(p, true)} />
         <div>
           <p className="text-xl font-bold">{p.displayName}</p>
           <p className="text-xs text-ink-3">
@@ -229,7 +229,7 @@ function ProfileEditor({ p }: { p: Professional }) {
         <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-ink-3 uppercase">Fotografias autorizadas · {p.photos.length}/8</p>
         <div className="grid grid-cols-3 gap-2">
           {p.photos.map((ph) => (
-            <Art key={ph.id} hue={ph.hue} label={p.displayName} className="aspect-[3/4] rounded-2xl">
+            <Art key={ph.id} hue={ph.hue} src={ph.src} label={p.displayName} className="aspect-[3/4] rounded-2xl">
               <button aria-label="Remover foto" onClick={() => removePhoto(ph.id)} className="absolute top-1.5 right-1.5 grid size-7 place-items-center rounded-full bg-black/50">
                 <Trash2 className="size-3.5" />
               </button>

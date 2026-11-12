@@ -26,7 +26,7 @@ export default function MessagesPage() {
           {convs.map((c) => (
             <li key={c.conversation.id}>
               <Link href={`/mensagens/${c.conversation.id}`} className="flex items-center gap-3 py-3.5">
-                <Avatar hue={c.hue} name={c.name} size={50} />
+                <Avatar hue={c.hue} name={c.name} size={50} src={c.src} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[15px]">{c.name}</span>

@@ -56,8 +56,10 @@ export default function LoginPage() {
     return (
       <div className="-mx-6 flex min-h-dvh flex-col">
         <div className="relative flex-1">
-          <Art hue={30} label="P" className="absolute inset-0 rounded-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/10 to-black" />
+          <div className="absolute inset-0 pt-40">
+            <Art hue={30} label="PRIVÉ" src="/demo/perfil-1.webp" eager className="h-full rounded-none" />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black from-15% via-black/10 via-45% to-black" />
           <div className="relative flex flex-col items-center px-6 pt-20 text-center animate-rise">
             <Logo crown className="text-[64px]" />
             <p className="mt-3 text-[15px] leading-snug text-ink">

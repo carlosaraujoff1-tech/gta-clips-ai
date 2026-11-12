@@ -6,7 +6,7 @@ import { ArrowRight, Heart, MapPin, Star } from "lucide-react";
 import { Art } from "./art";
 import { CheckDot, cn } from "./ui";
 import { FEATURES } from "@/lib/config";
-import { ratingOf, toggleFavorite } from "@/lib/db";
+import { coverOf, ratingOf, toggleFavorite } from "@/lib/db";
 import { brl } from "@/lib/format";
 import type { DB, Professional } from "@/lib/types";
 
@@ -41,7 +41,7 @@ export function ProfileCard({ db, p, fav, wide, index = 0 }: { db: DB; p: Profes
       className={cn("group block overflow-hidden rounded-2xl border border-line bg-card animate-rise", wide && "w-60 shrink-0")}
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      <Art hue={p.hue} label={p.displayName} className="aspect-[4/5] rounded-none rounded-t-2xl">
+      <Art hue={p.hue} label={p.displayName} src={coverOf(p)} className="aspect-[4/5] rounded-none rounded-t-2xl">
         <FavButton active={fav} id={p.id} className="absolute top-1.5 left-1.5" />
         <CheckDot className="absolute top-2.5 right-2.5" />
         <div className="absolute inset-x-0 bottom-0 px-3 pb-2">

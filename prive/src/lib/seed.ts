@@ -100,14 +100,24 @@ export function buildSeed(): DB {
     pro(6, "Lorena Vieira", "Viagens executivas e eventos", "Belo Horizonte", "Savassi", ["Viagens", "Jantares & eventos"], 650, evenings, 40, "Mulheres", ["Discreta", "Bilíngue", "Viagens"], ["Português", "Inglês", "Francês"]),
     pro(7, "Gabriel Torres", "Conversa, cultura e boa mesa", "Curitiba", "Batel", ["Conversa", "Jantares & eventos"], 400, evenings, 190, "Homens", ["Discreto", "Pontual"]),
     pro(8, "Marina Alves", "Discrição e sofisticação", "São Paulo", "Moema", ["Companhia", "Vida noturna"], 550, allWeek, 20),
+    pro(11, "Camila Reis", "Sofisticação e boa conversa", "Rio de Janeiro", "Barra da Tijuca", ["Companhia", "Vida noturna"], 480, evenings, 15),
     pro(10, "Clara & Diego", "Casal para eventos e noites especiais", "São Paulo", "Pinheiros", ["Vida noturna", "Jantares & eventos"], 900, weekend, 300, "Casais", ["Discretos", "Atendimento VIP"]),
   ];
+
+  // Fotos de demonstração (autorizadas pelo cliente) — uma por perfil.
+  const PHOTO_BY_PROFILE: Record<string, number> = { "p-1": 1, "p-2": 2, "p-4": 3, "p-5": 4, "p-6": 5, "p-11": 6, "p-8": 7, "p-9": 8 };
+  const withPhoto = (p: Professional) => {
+    const n = PHOTO_BY_PROFILE[p.id];
+    if (n) p.photos = [{ id: `ph-${p.id}-real`, src: `/demo/perfil-${n}.webp`, hue: p.hue, caption: "Ensaio", status: p.photos[0]?.status ?? "approved" }];
+  };
+  pros.forEach((x) => withPhoto(x.p));
 
   // Um perfil ainda em verificação (aparece em "Verificações pendentes" no admin).
   const pending = pro(9, "Sofia Lima", "Novo perfil em análise", "São Paulo", "Pinheiros", ["Companhia"], 500, evenings, 280);
   pending.p.verification = "pending";
   pending.p.status = "pending";
   pending.p.photos = pending.p.photos.map((ph) => ({ ...ph, status: "pending" }));
+  withPhoto(pending.p);
 
   const users: User[] = [
     user("u-client", "cliente@demo.prive", "Lucas Oliveira", "client", 40),

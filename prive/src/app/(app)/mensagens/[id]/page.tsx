@@ -60,7 +60,7 @@ export default function ConversationPage() {
         }
         title={
           <>
-            <Avatar hue={peer.hue} name={peer.name} size={34} />
+            <Avatar hue={peer.hue} name={peer.name} size={34} src={peer.src} />
             <span className="truncate text-xl">{peer.name}</span>
           </>
         }

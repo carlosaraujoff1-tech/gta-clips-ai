@@ -32,6 +32,8 @@ export type Verification = "none" | "pending" | "verified" | "rejected";
 
 export interface Photo {
   id: string;
+  /** URL da foto. Sem src, o app mostra arte gerada (placeholder). */
+  src?: string;
   hue: number;
   caption: string;
   status: "pending" | "approved" | "rejected";

@@ -4,7 +4,7 @@ import { cn } from "./ui";
  * Arte de capa gerada (sem fotos reais). Em produção, as fotos autorizadas vêm do
  * bucket privado do Supabase via URL assinada; este componente é o placeholder.
  */
-export function Art({ hue, label, className, arch, children }: { hue: number; label: string; className?: string; arch?: boolean; children?: React.ReactNode }) {
+export function Art({ hue, label, className, arch, src, eager, children }: { hue: number; label: string; className?: string; arch?: boolean; src?: string; eager?: boolean; children?: React.ReactNode }) {
   const initial = label.trim().charAt(0).toUpperCase() || "P";
   return (
     <div
@@ -15,6 +15,11 @@ export function Art({ hue, label, className, arch, children }: { hue: number; la
           linear-gradient(160deg, hsl(${hue} 25% 9%), #070707)`,
       }}
     >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={label} loading={eager ? "eager" : "lazy"} draggable={false} className="absolute inset-0 h-full w-full object-cover object-top" />
+      ) : (
+        <>
       <svg aria-hidden className="absolute inset-0 h-full w-full opacity-[0.35] mix-blend-overlay" viewBox="0 0 100 140" preserveAspectRatio="xMidYMid slice">
         <defs>
           <linearGradient id={`g${hue}`} x1="0" x2="0" y1="0" y2="1">
@@ -26,13 +31,20 @@ export function Art({ hue, label, className, arch, children }: { hue: number; la
         <path d="M14 140 C18 98 34 84 50 84 C66 84 82 98 86 140 Z" fill={`url(#g${hue})`} />
       </svg>
       <span className="font-display pointer-events-none absolute right-3 bottom-1 text-[72px] leading-none text-white/[0.07] select-none">{initial}</span>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+        </>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
       {children}
     </div>
   );
 }
 
-export function Avatar({ hue, name, size = 44 }: { hue: number; name: string; size?: number }) {
+export function Avatar({ hue, name, size = 44, src }: { hue: number; name: string; size?: number; src?: string }) {
+  if (src)
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={name} width={size} height={size} className="art-blur shrink-0 rounded-full border border-gold/30 object-cover object-top" style={{ width: size, height: size }} />
+    );
   return (
     <span
       className="font-display grid shrink-0 place-items-center rounded-full border border-gold/30 text-gold-2"

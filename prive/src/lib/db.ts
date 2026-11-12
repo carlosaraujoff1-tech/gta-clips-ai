@@ -28,7 +28,7 @@ import type {
   VerificationRequest,
 } from "./types";
 
-const KEY = "prive.db.v2";
+const KEY = "prive.db.v3";
 let state: DB | null = null;
 const listeners = new Set<() => void>();
 
@@ -335,6 +335,11 @@ export function searchProfessionals(db: DB, f: SearchFilters, viewerId?: string 
   });
 }
 
+/** Foto de capa: primeira foto aprovada (ou a primeira, para o próprio dono/moderação). */
+export function coverOf(p: { photos: { src?: string; status: string }[] }, includePending = false): string | undefined {
+  return (p.photos.find((ph) => ph.src && (includePending || ph.status === "approved")) ?? undefined)?.src;
+}
+
 export function ratingOf(db: DB, professionalId: string) {
   const rs = db.reviews.filter((r) => r.professionalId === professionalId && r.status === "published");
   const avg = rs.length ? rs.reduce((s, r) => s + r.rating, 0) / rs.length : 0;
@@ -523,6 +528,7 @@ export function conversationPeer(db: DB, convId: string, me: User) {
     peerUserId: peerUser?.id ?? "deleted",
     name: amClient ? (pro?.displayName ?? "Perfil removido") : (peerUser?.name ?? "Usuário removido"),
     hue: amClient ? (pro?.hue ?? 40) : (peerUser?.hue ?? 40),
+    src: amClient && pro ? coverOf(pro) : undefined,
   };
 }
 
